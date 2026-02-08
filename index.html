@@ -4,29 +4,28 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Revolut IPO Scenario Dashboard</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- React 18 -->
+  <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Recharts peer deps + Recharts UMD -->
+  <script crossorigin src="https://unpkg.com/react-is@18.2.0/umd/react-is.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script crossorigin src="https://unpkg.com/recharts@2.13.3/umd/Recharts.js"></script>
+  <!-- Babel for in-browser JSX -->
+  <script crossorigin src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
+  <!-- Tailwind CSS (Play CDN — JIT in browser) -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .recharts-wrapper { font-family: inherit; }
     /* Password Gate */
     #password-gate {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
       background: linear-gradient(135deg, #111827 0%, #1e1b4b 50%, #312e81 100%);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     .gate-card {
-      background: white;
-      border-radius: 1.5rem;
-      padding: 2.5rem;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4);
-      text-align: center;
+      background: white; border-radius: 1.5rem; padding: 2.5rem; width: 100%; max-width: 400px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.4); text-align: center;
     }
     .gate-logo {
       width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -45,8 +44,7 @@
     .gate-btn {
       width: 100%; padding: 0.75rem; border: none; border-radius: 0.75rem;
       background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;
-      font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 1rem;
-      transition: opacity 0.2s;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 1rem; transition: opacity 0.2s;
     }
     .gate-btn:hover { opacity: 0.9; }
     .gate-error { color: #ef4444; font-size: 0.8rem; margin-top: 0.75rem; display: none; }
@@ -56,34 +54,6 @@
       25% { transform: translateX(-6px); }
       75% { transform: translateX(6px); }
     }
-  </style>
-  <style>
-    /* Tailwind CDN doesn't include all utilities, so we add critical ones */
-    .accent-indigo-600 { accent-color: #4f46e5; }
-    .bg-gradient-to-br { background-image: linear-gradient(to bottom right, var(--tw-gradient-stops)); }
-    .bg-gradient-to-r { background-image: linear-gradient(to right, var(--tw-gradient-stops)); }
-    .from-gray-900 { --tw-gradient-from: #111827; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, transparent); }
-    .via-gray-800 { --tw-gradient-stops: var(--tw-gradient-from), #1f2937, var(--tw-gradient-to, transparent); }
-    .to-indigo-900 { --tw-gradient-to: #312e81; }
-    .from-gray-50 { --tw-gradient-from: #f9fafb; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, transparent); }
-    .via-white { --tw-gradient-stops: var(--tw-gradient-from), #fff, var(--tw-gradient-to, transparent); }
-    .to-indigo-50\/30 { --tw-gradient-to: rgb(238 242 255 / 0.3); }
-    .from-amber-500 { --tw-gradient-from: #f59e0b; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, transparent); }
-    .to-orange-500 { --tw-gradient-to: #f97316; }
-    .from-indigo-500 { --tw-gradient-from: #6366f1; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, transparent); }
-    .to-purple-600 { --tw-gradient-to: #9333ea; }
-    .bg-white\/10 { background-color: rgb(255 255 255 / 0.1); }
-    .bg-indigo-50\/50 { background-color: rgb(238 242 255 / 0.5); }
-    .bg-red-50\/30 { background-color: rgb(254 242 242 / 0.3); }
-    .bg-amber-50\/30 { background-color: rgb(255 251 235 / 0.3); }
-    .bg-emerald-50\/30 { background-color: rgb(236 253 245 / 0.3); }
-    .bg-gray-50\/50 { background-color: rgb(249 250 251 / 0.5); }
-    .text-white\/80 { color: rgb(255 255 255 / 0.8); }
-    .backdrop-blur-sm { backdrop-filter: blur(4px); }
-    .tracking-tight { letter-spacing: -0.025em; }
-    .tracking-wider { letter-spacing: 0.05em; }
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .recharts-wrapper { font-family: inherit; }
   </style>
 </head>
 <body>
@@ -105,46 +75,40 @@
   <div id="root" style="display:none"></div>
 
   <script>
-    // SHA-256 hash of the password (password is NOT stored in plaintext)
-    const HASH = "d708c613502718698a7d799ad9e76f9569c602bc5cdc100de7078f1ef3160c27";
-
-    async function sha256(message) {
-      const msgBuffer = new TextEncoder().encode(message);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    var HASH = "d708c613502718698a7d799ad9e76f9569c602bc5cdc100de7078f1ef3160c27";
+    async function sha256(msg) {
+      var buf = new TextEncoder().encode(msg);
+      var hash = await crypto.subtle.digest("SHA-256", buf);
+      return Array.from(new Uint8Array(hash)).map(function(b){return b.toString(16).padStart(2,"0")}).join("");
     }
-
     async function handleUnlock(e) {
       e.preventDefault();
-      const input = document.getElementById("gate-password");
-      const errorEl = document.getElementById("gate-error");
-      const hash = await sha256(input.value);
-
-      if (hash === HASH) {
-        // Correct — hide gate, show dashboard
+      var input = document.getElementById("gate-password");
+      var err = document.getElementById("gate-error");
+      var h = await sha256(input.value);
+      if (h === HASH) {
         document.getElementById("password-gate").style.display = "none";
         document.getElementById("root").style.display = "block";
-        // Trigger resize so Recharts ResponsiveContainer recalculates dimensions
-        setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+        setTimeout(function(){ window.dispatchEvent(new Event("resize")); }, 100);
       } else {
-        // Wrong password
         input.classList.add("error");
-        errorEl.classList.add("visible");
-        setTimeout(() => input.classList.remove("error"), 400);
+        err.classList.add("visible");
+        setTimeout(function(){ input.classList.remove("error"); }, 400);
         input.value = "";
         input.focus();
       }
       return false;
     }
-
   </script>
 
   <script type="text/babel">
     const { useState, useMemo } = React;
-    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, ReferenceLine } = Recharts;
+    const {
+      BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+      ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, ReferenceLine
+    } = Recharts;
 
-    // ── Constants ──────────────────────────────────────────────────────────
+    // ── Data ───────────────────────────────────────────────
     const GBP_EUR = 1.1512;
     const CURRENT_PRICE_GBP = 1054.44;
     const CURRENT_PRICE_EUR = CURRENT_PRICE_GBP * GBP_EUR;
@@ -154,31 +118,21 @@
       { id: "rovera", name: "Rovera", shares: 8, purchasePriceGBP: 65.75, batch: 2, color: "#06b6d4" },
       { id: "trombetta", name: "Trombetta", shares: 8, purchasePriceGBP: 65.75, batch: 2, color: "#8b5cf6" },
     ];
-
     const TOTAL_SHARES = INVESTORS.reduce((s, i) => s + i.shares, 0);
 
     const SCENARIOS = [
-      {
-        id: "bear", name: "Bear Case", tag: "Conservative", emoji: "\u{1F43B}", multiplier: 0.80,
+      { id: "bear", name: "Bear Case", tag: "Conservative", emoji: "\u{1F43B}", multiplier: 0.80,
         desc: "IPO priced at ~20% discount to last private round. Reflects Klarna-style markdown, investor caution around high EV/Revenue multiples (18x), and post-2025 fintech IPO fatigue.",
         postIpo: { m6: -0.20, m12: -0.35, m18: -0.25, m24: -0.10 },
-        reference: "Klarna: IPO at $15B, now trading ~50% below IPO price",
-        color: "#ef4444",
-      },
-      {
-        id: "base", name: "Base Case", tag: "Expected", emoji: "\u{1F4CA}", multiplier: 1.0,
+        reference: "Klarna: IPO at $15B, now trading ~50% below IPO price", color: "#ef4444" },
+      { id: "base", name: "Base Case", tag: "Expected", emoji: "\u{1F4CA}", multiplier: 1.0,
         desc: "IPO at current $75B private valuation. Orderly listing with moderate first-day pop, then typical post-IPO volatility. Assumes stable macro conditions and continued revenue growth to $9B target.",
         postIpo: { m6: -0.10, m12: -0.05, m18: 0.10, m24: 0.25 },
-        reference: "Nubank: IPO'd at fair value, now +56% from listing price after 4 years",
-        color: "#f59e0b",
-      },
-      {
-        id: "bull", name: "Bull Case", tag: "Optimistic", emoji: "\u{1F402}", multiplier: 1.45,
+        reference: "Nubank: IPO'd at fair value, now +56% from listing price after 4 years", color: "#f59e0b" },
+      { id: "bull", name: "Bull Case", tag: "Optimistic", emoji: "\u{1F402}", multiplier: 1.45,
         desc: "Strong demand drives IPO at $100B+ valuation. Reflects Revolut hitting $9B revenue target, favorable market window, high oversubscription, and significant first-day pop (~20%).",
         postIpo: { m6: 0.05, m12: 0.15, m18: 0.30, m24: 0.55 },
-        reference: "Nubank long-term: grew from $45B IPO to $90B+ market cap",
-        color: "#22c55e",
-      },
+        reference: "Nubank long-term: grew from $45B IPO to $90B+ market cap", color: "#22c55e" },
     ];
 
     const COMPARABLE_IPOS = [
@@ -188,71 +142,84 @@
       { name: "Chime (2025)", firstDay: 12, month6: -15, month12: null, month24: null, current: -15, valAtIPO: "$25B" },
     ];
 
-    // ── Helpers ────────────────────────────────────────────────────────────
-    const fmt = (n, dec = 0) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "EUR", minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n);
-    const fmtGBP = (n, dec = 0) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: dec, maximumFractionDigits: dec }).format(n);
-    const fmtPct = (n) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
-    const fmtX = (n) => `${n.toFixed(0)}x`;
+    // ── Formatters ─────────────────────────────────────────
+    const fmt = (n, dec) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "EUR", minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }).format(n);
+    const fmtGBP = (n, dec) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }).format(n);
+    const fmtPct = (n) => (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
+    const fmtX = (n) => n.toFixed(0) + "x";
 
-    // ── Components ─────────────────────────────────────────────────────────
-    const Card = ({ children, className = "" }) => (
-      <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${className}`}>{children}</div>
-    );
+    // ── Tiny UI helpers ────────────────────────────────────
+    function Card({ children, className }) {
+      return <div className={"bg-white rounded-2xl shadow-sm border border-gray-100 " + (className || "")}>{children}</div>;
+    }
+    function Badge({ children, color }) {
+      const m = { green: "bg-emerald-50 text-emerald-700 border-emerald-200", red: "bg-red-50 text-red-700 border-red-200",
+        blue: "bg-blue-50 text-blue-700 border-blue-200", amber: "bg-amber-50 text-amber-700 border-amber-200",
+        gray: "bg-gray-50 text-gray-700 border-gray-200", indigo: "bg-indigo-50 text-indigo-700 border-indigo-200" };
+      return <span className={"text-xs font-semibold px-2 py-0.5 rounded-full border " + (m[color] || m.gray)}>{children}</span>;
+    }
+    function Dot({ color, size }) {
+      return <div style={{ width: size || 10, height: size || 10, borderRadius: "50%", background: color, flexShrink: 0 }} />;
+    }
 
-    const Badge = ({ children, color = "gray" }) => {
-      const colors = {
-        green: "bg-emerald-50 text-emerald-700 border-emerald-200",
-        red: "bg-red-50 text-red-700 border-red-200",
-        blue: "bg-blue-50 text-blue-700 border-blue-200",
-        amber: "bg-amber-50 text-amber-700 border-amber-200",
-        gray: "bg-gray-50 text-gray-700 border-gray-200",
-        indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
-      };
-      return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${colors[color]}`}>{children}</span>;
-    };
+    // ── Tooltip ────────────────────────────────────────────
+    function TT({ active, payload, label }) {
+      if (!active || !payload) return null;
+      return (
+        <div style={{ background: "#fff", padding: 12, borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,.1)", border: "1px solid #f0f0f0", fontSize: 13 }}>
+          <p style={{ fontWeight: 600, color: "#1f2937", marginBottom: 4 }}>{label}</p>
+          {payload.map(function(p, i) {
+            return <p key={i} style={{ color: p.color, fontWeight: 500, margin: "2px 0" }}>
+              {p.name}: {typeof p.value === "number" && Math.abs(p.value) > 100 ? fmt(p.value) : p.value + "%"}
+            </p>;
+          })}
+        </div>
+      );
+    }
 
-    // ── Main Dashboard ─────────────────────────────────────────────────────
-    function RevolutIPODashboard() {
+    // ══════════════════════════════════════════════════════
+    //  MAIN DASHBOARD
+    // ══════════════════════════════════════════════════════
+    function App() {
       const [activeScenario, setActiveScenario] = useState("base");
       const [sellPct, setSellPct] = useState(50);
       const [activeTab, setActiveTab] = useState("overview");
 
-      const scenario = SCENARIOS.find((s) => s.id === activeScenario);
+      const scenario = SCENARIOS.find(function(s){ return s.id === activeScenario; });
       const ipoPrice = CURRENT_PRICE_GBP * scenario.multiplier;
       const ipoPriceEUR = ipoPrice * GBP_EUR;
 
-      const investorData = useMemo(() => {
-        return INVESTORS.map((inv) => {
-          const costBasis = inv.shares * inv.purchasePriceGBP * GBP_EUR;
-          const currentVal = inv.shares * CURRENT_PRICE_EUR;
-          const currentGain = currentVal - costBasis;
-          const currentROI = ((currentVal / costBasis) - 1) * 100;
-          const sellAllVal = inv.shares * ipoPriceEUR;
-          const sellAllGain = sellAllVal - costBasis;
-          const sellAllROI = ((sellAllVal / costBasis) - 1) * 100;
-          const sharesToSell = Math.floor(inv.shares * (sellPct / 100));
-          const sharesToKeep = inv.shares - sharesToSell;
-          const sellPartVal = sharesToSell * ipoPriceEUR;
-          const kept6m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m6);
-          const kept12m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m12);
-          const kept18m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m18);
-          const kept24m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m24);
-          return {
-            ...inv, costBasis, currentVal, currentGain, currentROI,
-            sellAllVal, sellAllGain, sellAllROI,
-            sharesToSell, sharesToKeep, sellPartVal,
-            kept6m, kept12m, kept18m, kept24m,
-            partialTotal6m: sellPartVal + kept6m,
-            partialTotal12m: sellPartVal + kept12m,
-            partialTotal18m: sellPartVal + kept18m,
-            partialTotal24m: sellPartVal + kept24m,
-          };
+      // ── Investor calcs ────────────────────────────────
+      const investorData = useMemo(function() {
+        return INVESTORS.map(function(inv) {
+          var costBasis = inv.shares * inv.purchasePriceGBP * GBP_EUR;
+          var currentVal = inv.shares * CURRENT_PRICE_EUR;
+          var currentGain = currentVal - costBasis;
+          var currentROI = ((currentVal / costBasis) - 1) * 100;
+          var sellAllVal = inv.shares * ipoPriceEUR;
+          var sellAllGain = sellAllVal - costBasis;
+          var sellAllROI = ((sellAllVal / costBasis) - 1) * 100;
+          var sharesToSell = Math.floor(inv.shares * (sellPct / 100));
+          var sharesToKeep = inv.shares - sharesToSell;
+          var sellPartVal = sharesToSell * ipoPriceEUR;
+          var kept6m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m6);
+          var kept12m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m12);
+          var kept18m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m18);
+          var kept24m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m24);
+          return Object.assign({}, inv, {
+            costBasis: costBasis, currentVal: currentVal, currentGain: currentGain, currentROI: currentROI,
+            sellAllVal: sellAllVal, sellAllGain: sellAllGain, sellAllROI: sellAllROI,
+            sharesToSell: sharesToSell, sharesToKeep: sharesToKeep, sellPartVal: sellPartVal,
+            kept6m: kept6m, kept12m: kept12m, kept18m: kept18m, kept24m: kept24m,
+            partialTotal6m: sellPartVal + kept6m, partialTotal12m: sellPartVal + kept12m,
+            partialTotal18m: sellPartVal + kept18m, partialTotal24m: sellPartVal + kept24m,
+          });
         });
-      }, [activeScenario, sellPct, ipoPriceEUR, scenario]);
+      }, [activeScenario, sellPct]);
 
-      const totals = useMemo(() => {
-        const t = { costBasis: 0, currentVal: 0, sellAllVal: 0, partialTotal6m: 0, partialTotal12m: 0, partialTotal18m: 0, partialTotal24m: 0, sellPartVal: 0 };
-        investorData.forEach((d) => {
+      const totals = useMemo(function() {
+        var t = { costBasis: 0, currentVal: 0, sellAllVal: 0, partialTotal6m: 0, partialTotal12m: 0, partialTotal18m: 0, partialTotal24m: 0, sellPartVal: 0 };
+        investorData.forEach(function(d) {
           t.costBasis += d.costBasis; t.currentVal += d.currentVal; t.sellAllVal += d.sellAllVal;
           t.partialTotal6m += d.partialTotal6m; t.partialTotal12m += d.partialTotal12m;
           t.partialTotal18m += d.partialTotal18m; t.partialTotal24m += d.partialTotal24m;
@@ -263,63 +230,51 @@
         return t;
       }, [investorData]);
 
-      const timelineData = useMemo(() => {
-        const points = [
-          { label: "Cost Basis", time: -1 }, { label: "Current Value", time: 0 },
-          { label: "At IPO", time: 1 }, { label: "+6 Months", time: 2 },
-          { label: "+12 Months", time: 3 }, { label: "+18 Months", time: 4 }, { label: "+24 Months", time: 5 },
+      // ── Chart data ─────────────────────────────────────
+      var holdLabel = "Sell " + sellPct + "% + Hold";
+
+      const timelineData = useMemo(function() {
+        var pts = [
+          { n: "Cost Basis", t: -1 }, { n: "Current", t: 0 }, { n: "At IPO", t: 1 },
+          { n: "+6 Mo", t: 2 }, { n: "+12 Mo", t: 3 }, { n: "+18 Mo", t: 4 }, { n: "+24 Mo", t: 5 }
         ];
-        return points.map((p) => {
-          let sellAllValue;
-          if (p.time === -1) sellAllValue = totals.costBasis;
-          else if (p.time === 0) sellAllValue = totals.currentVal;
-          else sellAllValue = totals.sellAllVal;
-
-          let partial;
-          if (p.time === -1) partial = totals.costBasis;
-          else if (p.time === 0) partial = totals.currentVal;
-          else if (p.time === 1) partial = totals.sellPartVal + investorData.reduce((s, d) => s + d.sharesToKeep * ipoPriceEUR, 0);
-          else if (p.time === 2) partial = totals.partialTotal6m;
-          else if (p.time === 3) partial = totals.partialTotal12m;
-          else if (p.time === 4) partial = totals.partialTotal18m;
-          else partial = totals.partialTotal24m;
-          return { name: p.label, "Sell All at IPO": sellAllValue, ["Sell " + sellPct + "% + Hold"]: partial };
+        return pts.map(function(p) {
+          var sa = p.t === -1 ? totals.costBasis : p.t === 0 ? totals.currentVal : totals.sellAllVal;
+          var pa;
+          if (p.t === -1) pa = totals.costBasis;
+          else if (p.t === 0) pa = totals.currentVal;
+          else if (p.t === 1) { pa = totals.sellPartVal; investorData.forEach(function(d){ pa += d.sharesToKeep * ipoPriceEUR; }); }
+          else if (p.t === 2) pa = totals.partialTotal6m;
+          else if (p.t === 3) pa = totals.partialTotal12m;
+          else if (p.t === 4) pa = totals.partialTotal18m;
+          else pa = totals.partialTotal24m;
+          var obj = { name: p.n }; obj["Sell All at IPO"] = sa; obj[holdLabel] = pa;
+          return obj;
         });
-      }, [totals, investorData, sellPct, ipoPriceEUR]);
+      }, [totals, investorData, sellPct]);
 
-      const investorCompareData = useMemo(() => {
-        return investorData.map((d) => ({
-          name: d.name, "Cost Basis": Math.round(d.costBasis),
-          "Sell All at IPO": Math.round(d.sellAllVal),
-          ["Partial (" + sellPct + "%) + Hold 24m"]: Math.round(d.partialTotal24m),
-        }));
+      const barData = useMemo(function() {
+        return investorData.map(function(d) {
+          var obj = { name: d.name, "Cost Basis": Math.round(d.costBasis), "Sell All at IPO": Math.round(d.sellAllVal) };
+          obj["Partial (" + sellPct + "%) +24m"] = Math.round(d.partialTotal24m);
+          return obj;
+        });
       }, [investorData, sellPct]);
 
-      const comparableData = COMPARABLE_IPOS.map((c) => ({
-        name: c.name, "First Day": c.firstDay, "6 Months": c.month6,
-        "12 Months": c.month12 != null ? c.month12 : 0, "Current": c.current,
-      }));
+      var comparableData = COMPARABLE_IPOS.map(function(c) {
+        return { name: c.name, "First Day": c.firstDay, "6 Months": c.month6, "Current": c.current };
+      });
 
-      const pieData = INVESTORS.map((inv) => ({ name: inv.name, value: inv.shares, color: inv.color }));
+      var pieData = INVESTORS.map(function(inv) { return { name: inv.name, value: inv.shares, color: inv.color }; });
 
-      const CustomTooltip = ({ active, payload, label }) => {
-        if (!active || !payload) return null;
-        return (
-          <div style={{ background: "white", padding: "12px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", border: "1px solid #f0f0f0", fontSize: "13px" }}>
-            <p style={{ fontWeight: 600, color: "#1f2937", marginBottom: "4px" }}>{label}</p>
-            {payload.map((p, i) => (
-              <p key={i} style={{ color: p.color, fontWeight: 500, margin: "2px 0" }}>
-                {p.name}: {typeof p.value === "number" && Math.abs(p.value) > 100 ? fmt(p.value) : p.value + "%"}
-              </p>
-            ))}
-          </div>
-        );
-      };
+      var eurFmt = function(v) { return "\u20AC" + (v / 1000).toFixed(0) + "k"; };
+      var pctFmt = function(v) { return v + "%"; };
 
+      // ══════════════════════════════════════════════════
       return (
-        <div className="min-h-screen" style={{ background: "linear-gradient(to bottom right, #f9fafb, #fff, rgba(238,242,255,0.3))" }}>
-          {/* Header */}
-          <div style={{ background: "linear-gradient(to right, #111827, #1f2937, #312e81)" }} className="text-white">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30">
+          {/* ── Header ──────────────────────────────────── */}
+          <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-indigo-900 text-white">
             <div className="max-w-7xl mx-auto px-6 py-8">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
@@ -327,495 +282,325 @@
                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
                       <span className="text-xl font-black text-indigo-600">R</span>
                     </div>
-                    <h1 className="text-2xl font-bold" style={{ letterSpacing: "-0.025em" }}>Revolut IPO Scenario Dashboard</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">Revolut IPO Scenario Dashboard</h1>
                   </div>
-                  <p className="text-gray-300 text-sm max-w-xl">
-                    Interactive analysis of exit strategies for your Revolut pre-IPO shares. Based on current $75B valuation, comparable fintech IPOs, and historical market patterns.
-                  </p>
+                  <p className="text-gray-300 text-sm max-w-xl">Interactive analysis of exit strategies for your Revolut pre-IPO shares. Based on current $75B valuation, comparable fintech IPOs, and historical market patterns.</p>
                 </div>
                 <div className="flex gap-3 flex-wrap">
-                  {[
-                    { label: "Current Price", value: fmtGBP(CURRENT_PRICE_GBP, 2) },
-                    { label: "Valuation", value: "$75B" },
-                    { label: "Total Shares", value: TOTAL_SHARES },
-                  ].map((m, i) => (
-                    <div key={i} style={{ background: "rgba(255,255,255,0.1)", backdropFilter: "blur(4px)" }} className="rounded-xl px-4 py-2 text-center">
-                      <p className="text-xs text-gray-400 uppercase" style={{ letterSpacing: "0.05em" }}>{m.label}</p>
-                      <p className="text-lg font-bold">{m.value}</p>
-                    </div>
-                  ))}
+                  {[{ l: "Current Price", v: fmtGBP(CURRENT_PRICE_GBP, 2) }, { l: "Valuation", v: "$75B" }, { l: "Total Shares", v: TOTAL_SHARES }].map(function(m, i) {
+                    return <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
+                      <p className="text-xs text-gray-400 uppercase tracking-wider">{m.l}</p>
+                      <p className="text-lg font-bold">{m.v}</p>
+                    </div>;
+                  })}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="max-w-7xl mx-auto px-6 py-8" style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-            {/* Tab Navigation */}
-            <div className="flex gap-2 bg-white rounded-xl p-1.5 shadow-sm border border-gray-100" style={{ width: "fit-content" }}>
-              {[
-                { id: "overview", label: "Portfolio Overview" },
-                { id: "scenarios", label: "IPO Scenarios" },
-                { id: "comparables", label: "Market Comparables" },
-              ].map((tab) => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    activeTab === tab.id ? "bg-indigo-600 text-white shadow-md" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-                  }`}>{tab.label}</button>
-              ))}
+          <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+            {/* ── Tabs ──────────────────────────────────────── */}
+            <div className="flex gap-2 bg-white rounded-xl p-1.5 shadow-sm border border-gray-100 w-fit">
+              {[{ id: "overview", l: "Portfolio Overview" }, { id: "scenarios", l: "IPO Scenarios" }, { id: "comparables", l: "Market Comparables" }].map(function(tab) {
+                return <button key={tab.id} onClick={function(){ setActiveTab(tab.id); }}
+                  className={"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all " + (activeTab === tab.id ? "bg-indigo-600 text-white shadow-md" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50")}>{tab.l}</button>;
+              })}
             </div>
 
-            {/* ── TAB: OVERVIEW ───────────────────────────────── */}
-            {activeTab === "overview" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  {[
-                    { label: "Total Invested", value: fmt(totals.costBasis), sub: "Across 2 batches", color: "text-gray-900" },
-                    { label: "Current Value", value: fmt(totals.currentVal), sub: fmtPct(((totals.currentVal / totals.costBasis) - 1) * 100) + " return", color: "text-gray-900", subColor: "text-emerald-600" },
-                    { label: "Unrealized Gain", value: fmt(totals.currentGain), sub: fmtX(totals.currentVal / totals.costBasis) + " multiple", color: "text-emerald-600" },
-                    { label: "Avg Return", value: fmtX(totals.currentVal / totals.costBasis), sub: "On total capital deployed", color: "text-emerald-600" },
-                  ].map((c, i) => (
-                    <Card key={i} className="p-5">
-                      <p className="text-xs text-gray-400 uppercase font-semibold" style={{ letterSpacing: "0.05em" }}>{c.label}</p>
-                      <p className={`text-2xl font-bold mt-1 ${c.color}`}>{c.value}</p>
-                      <p className={`text-xs mt-1 ${c.subColor || "text-gray-400"}`} style={{ fontWeight: c.subColor ? 600 : 400 }}>{c.sub}</p>
-                    </Card>
-                  ))}
-                </div>
+            {/* ═══════════════ OVERVIEW ═══════════════ */}
+            {activeTab === "overview" && <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Total Invested</p><p className="text-2xl font-bold text-gray-900 mt-1">{fmt(totals.costBasis)}</p><p className="text-xs text-gray-400 mt-1">Across 2 batches</p></Card>
+                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Current Value</p><p className="text-2xl font-bold text-gray-900 mt-1">{fmt(totals.currentVal)}</p><p className="text-xs text-emerald-600 font-semibold mt-1">{fmtPct(((totals.currentVal / totals.costBasis) - 1) * 100)} return</p></Card>
+                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Unrealized Gain</p><p className="text-2xl font-bold text-emerald-600 mt-1">{fmt(totals.currentGain)}</p><p className="text-xs text-gray-400 mt-1">{fmtX(totals.currentVal / totals.costBasis)} multiple</p></Card>
+                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Avg Return</p><p className="text-2xl font-bold text-emerald-600 mt-1">{fmtX(totals.currentVal / totals.costBasis)}</p><p className="text-xs text-gray-400 mt-1">On total capital deployed</p></Card>
+              </div>
 
-                {/* Investor Detail Table */}
-                <Card className="overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-gray-900">Individual Positions</h2>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          {["Investor", "Batch", "Shares", "Purchase Price", "Cost Basis", "Current Value", "Gain", "ROI"].map((h, i) => (
-                            <th key={i} className={`${i < 2 ? "text-left" : "text-right"} px-6 py-3 font-semibold text-gray-500 uppercase text-xs`} style={{ letterSpacing: "0.05em" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {investorData.map((d) => (
-                          <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50">
-                            <td className="px-6 py-4"><div className="flex items-center gap-2"><div style={{ width: 12, height: 12, borderRadius: "50%", background: d.color }} /><span className="font-semibold text-gray-900">{d.name}</span></div></td>
-                            <td className="px-6 py-4"><Badge color={d.batch === 1 ? "indigo" : "blue"}>Batch {d.batch}</Badge></td>
-                            <td className="text-right px-6 py-4 font-medium">{d.shares}</td>
-                            <td className="text-right px-6 py-4 text-gray-600">{fmtGBP(d.purchasePriceGBP, 2)}</td>
-                            <td className="text-right px-6 py-4 text-gray-600">{fmt(d.costBasis)}</td>
-                            <td className="text-right px-6 py-4 font-semibold">{fmt(d.currentVal)}</td>
-                            <td className="text-right px-6 py-4 font-semibold text-emerald-600">{fmt(d.currentGain)}</td>
-                            <td className="text-right px-6 py-4"><span className="text-emerald-600 font-bold">{fmtPct(d.currentROI)}</span></td>
-                          </tr>
-                        ))}
-                        <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
-                          <td className="px-6 py-4 text-gray-900">Total</td><td></td>
-                          <td className="text-right px-6 py-4">{TOTAL_SHARES}</td><td></td>
-                          <td className="text-right px-6 py-4">{fmt(totals.costBasis)}</td>
-                          <td className="text-right px-6 py-4">{fmt(totals.currentVal)}</td>
-                          <td className="text-right px-6 py-4 text-emerald-600">{fmt(totals.currentGain)}</td>
-                          <td className="text-right px-6 py-4 text-emerald-600">{fmtPct(((totals.currentVal / totals.costBasis) - 1) * 100)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
+              <Card className="overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100"><h2 className="text-lg font-bold text-gray-900">Individual Positions</h2></div>
+                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50">
+                  {["Investor","Batch","Shares","Purchase Price","Cost Basis","Current Value","Gain","ROI"].map(function(h,i){
+                    return <th key={i} className={(i<2?"text-left":"text-right")+" px-6 py-3 font-semibold text-gray-500 uppercase text-xs tracking-wider"}>{h}</th>;
+                  })}
+                </tr></thead><tbody>
+                  {investorData.map(function(d){return <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50/50">
+                    <td className="px-6 py-4"><div className="flex items-center gap-2"><Dot color={d.color} size={12} /><span className="font-semibold text-gray-900">{d.name}</span></div></td>
+                    <td className="px-6 py-4"><Badge color={d.batch===1?"indigo":"blue"}>{"Batch "+d.batch}</Badge></td>
+                    <td className="text-right px-6 py-4 font-medium">{d.shares}</td>
+                    <td className="text-right px-6 py-4 text-gray-600">{fmtGBP(d.purchasePriceGBP,2)}</td>
+                    <td className="text-right px-6 py-4 text-gray-600">{fmt(d.costBasis)}</td>
+                    <td className="text-right px-6 py-4 font-semibold">{fmt(d.currentVal)}</td>
+                    <td className="text-right px-6 py-4 font-semibold text-emerald-600">{fmt(d.currentGain)}</td>
+                    <td className="text-right px-6 py-4"><span className="text-emerald-600 font-bold">{fmtPct(d.currentROI)}</span></td>
+                  </tr>;})}
+                  <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
+                    <td className="px-6 py-4 text-gray-900">Total</td><td></td><td className="text-right px-6 py-4">{TOTAL_SHARES}</td><td></td>
+                    <td className="text-right px-6 py-4">{fmt(totals.costBasis)}</td><td className="text-right px-6 py-4">{fmt(totals.currentVal)}</td>
+                    <td className="text-right px-6 py-4 text-emerald-600">{fmt(totals.currentGain)}</td>
+                    <td className="text-right px-6 py-4 text-emerald-600">{fmtPct(((totals.currentVal/totals.costBasis)-1)*100)}</td>
+                  </tr>
+                </tbody></table></div>
+              </Card>
 
-                {/* Charts */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card className="p-6">
-                    <h3 className="font-bold text-gray-900 mb-4">Share Distribution</h3>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" label={({ name, value }) => name + ": " + value}>
-                          {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </Card>
-                  <Card className="p-6">
-                    <h3 className="font-bold text-gray-900 mb-4">Value by Investor</h3>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={investorData.map((d) => ({ name: d.name, "Cost Basis": Math.round(d.costBasis), "Current Value": Math.round(d.currentVal) }))}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => "\u20AC" + (v / 1000).toFixed(0) + "k"} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend />
-                        <Bar dataKey="Cost Basis" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Current Value" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </Card>
-                </div>
-
-                {/* Key Context */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-3">Key Investment Context</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-indigo-50 rounded-xl p-4">
-                      <p className="font-semibold text-indigo-900 text-sm">Revolut Financials (2024)</p>
-                      <p className="text-indigo-700 text-sm mt-1">Revenue: $4B (+72% YoY)</p>
-                      <p className="text-indigo-700 text-sm">Profit before tax: $1.4B (+149%)</p>
-                      <p className="text-indigo-700 text-sm">65M+ customers worldwide</p>
-                    </div>
-                    <div className="bg-amber-50 rounded-xl p-4">
-                      <p className="font-semibold text-amber-900 text-sm">2026 Targets</p>
-                      <p className="text-amber-700 text-sm mt-1">Revenue target: $9B</p>
-                      <p className="text-amber-700 text-sm">Profit target: $3.5B</p>
-                      <p className="text-amber-700 text-sm">IPO likely 2027-2028</p>
-                    </div>
-                    <div className="bg-emerald-50 rounded-xl p-4">
-                      <p className="font-semibold text-emerald-900 text-sm">Valuation Context</p>
-                      <p className="text-emerald-700 text-sm mt-1">Private: $75B (Nov 2025)</p>
-                      <p className="text-emerald-700 text-sm">EV/Revenue: 18.3x</p>
-                      <p className="text-emerald-700 text-sm">Comparable to Barclays, SocGen by mkt cap</p>
-                    </div>
-                  </div>
+                  <h3 className="font-bold text-gray-900 mb-4">Share Distribution</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value"
+                      label={function(e){ return e.name+": "+e.value; }}>
+                      {pieData.map(function(e,i){ return <Cell key={i} fill={e.color} />; })}
+                    </Pie><Tooltip /></PieChart>
+                  </ResponsiveContainer>
+                </Card>
+                <Card className="p-6">
+                  <h3 className="font-bold text-gray-900 mb-4">Value by Investor</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={investorData.map(function(d){ return { name: d.name, "Cost Basis": Math.round(d.costBasis), "Current Value": Math.round(d.currentVal) }; })}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={eurFmt} />
+                      <Tooltip content={<TT />} /><Legend />
+                      <Bar dataKey="Cost Basis" fill="#cbd5e1" radius={[4,4,0,0]} />
+                      <Bar dataKey="Current Value" fill="#6366f1" radius={[4,4,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </Card>
               </div>
-            )}
 
-            {/* ── TAB: SCENARIOS ──────────────────────────────── */}
-            {activeTab === "scenarios" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                {/* Scenario Selector */}
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-3">Key Investment Context</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {SCENARIOS.map((s) => (
-                    <button key={s.id} onClick={() => setActiveScenario(s.id)}
-                      className={`text-left p-5 rounded-2xl border-2 transition-all ${
-                        activeScenario === s.id ? "border-indigo-500 shadow-md" : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm"
-                      }`}
-                      style={activeScenario === s.id ? { background: "rgba(238,242,255,0.5)" } : {}}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xl">{s.emoji}</span>
-                        <span className="font-bold text-gray-900">{s.name}</span>
-                        <Badge color={s.id === "bear" ? "red" : s.id === "base" ? "amber" : "green"}>{s.tag}</Badge>
-                      </div>
-                      <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-sm font-semibold" style={{ color: s.color }}>
-                          IPO Price: {fmtGBP(CURRENT_PRICE_GBP * s.multiplier, 2)} ({s.multiplier === 1 ? "at par" : ((s.multiplier - 1) * 100).toFixed(0) + "% " + (s.multiplier > 1 ? "premium" : "discount")})
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1" style={{ fontStyle: "italic" }}>{s.reference}</p>
-                      </div>
-                    </button>
-                  ))}
+                  <div className="bg-indigo-50 rounded-xl p-4"><p className="font-semibold text-indigo-900 text-sm">Revolut Financials (2024)</p><p className="text-indigo-700 text-sm mt-1">Revenue: $4B (+72% YoY)</p><p className="text-indigo-700 text-sm">Profit before tax: $1.4B (+149%)</p><p className="text-indigo-700 text-sm">65M+ customers worldwide</p></div>
+                  <div className="bg-amber-50 rounded-xl p-4"><p className="font-semibold text-amber-900 text-sm">2026 Targets</p><p className="text-amber-700 text-sm mt-1">Revenue target: $9B</p><p className="text-amber-700 text-sm">Profit target: $3.5B</p><p className="text-amber-700 text-sm">IPO likely 2027-2028</p></div>
+                  <div className="bg-emerald-50 rounded-xl p-4"><p className="font-semibold text-emerald-900 text-sm">Valuation Context</p><p className="text-emerald-700 text-sm mt-1">Private: $75B (Nov 2025)</p><p className="text-emerald-700 text-sm">EV/Revenue: 18.3x</p><p className="text-emerald-700 text-sm">Comparable to Barclays, SocGen by mkt cap</p></div>
                 </div>
+              </Card>
+            </div>}
 
-                {/* Strategy Controls */}
-                <Card className="p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">Strategy: Sell {sellPct}% at IPO, Hold {100 - sellPct}%</h2>
-                      <p className="text-sm text-gray-500 mt-1">Adjust the slider to compare selling all shares at IPO vs. holding some for post-IPO upside</p>
-                    </div>
-                    <div className="flex items-center gap-4" style={{ minWidth: 300 }}>
-                      <span className="text-xs font-semibold text-gray-500">SELL</span>
-                      <input type="range" min={0} max={100} step={5} value={sellPct} onChange={(e) => setSellPct(Number(e.target.value))}
-                        style={{ flex: 1, height: 8, accentColor: "#4f46e5" }} />
-                      <span className="text-sm font-bold text-indigo-600">{sellPct}%</span>
-                    </div>
+            {/* ═══════════════ SCENARIOS ═══════════════ */}
+            {activeTab === "scenarios" && <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {SCENARIOS.map(function(s){ return <button key={s.id} onClick={function(){ setActiveScenario(s.id); }}
+                  className={"text-left p-5 rounded-2xl border-2 transition-all " + (activeScenario===s.id ? "border-indigo-500 bg-indigo-50/50 shadow-md" : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm")}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">{s.emoji}</span><span className="font-bold text-gray-900">{s.name}</span>
+                    <Badge color={s.id==="bear"?"red":s.id==="base"?"amber":"green"}>{s.tag}</Badge>
                   </div>
-                </Card>
+                  <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-sm font-semibold" style={{ color: s.color }}>
+                      {"IPO Price: " + fmtGBP(CURRENT_PRICE_GBP * s.multiplier, 2) + " (" + (s.multiplier===1 ? "at par" : ((s.multiplier-1)*100).toFixed(0)+"% "+(s.multiplier>1?"premium":"discount")) + ")"}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1 italic">{s.reference}</p>
+                  </div>
+                </button>; })}
+              </div>
 
-                {/* Outcome Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Strategy A */}
-                  <Card className="overflow-hidden">
-                    <div style={{ background: "linear-gradient(to right, #f59e0b, #f97316)" }} className="px-6 py-4">
-                      <h3 className="text-white font-bold text-lg">Strategy A: Sell 100% at IPO</h3>
-                      <p style={{ color: "rgba(255,255,255,0.8)" }} className="text-xs">Immediate liquidity, zero post-IPO risk</p>
-                    </div>
-                    <div className="p-6" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      <div className="text-center py-3">
-                        <p className="text-3xl font-black text-gray-900">{fmt(totals.sellAllVal)}</p>
-                        <p className="text-sm text-emerald-600 font-semibold mt-1">
-                          {fmtPct(((totals.sellAllVal / totals.costBasis) - 1) * 100)} return &middot; {fmtX(totals.sellAllVal / totals.costBasis)} multiple
-                        </p>
-                      </div>
-                      {investorData.map((d) => (
-                        <div key={d.id} className="flex items-center justify-between py-2 border-t border-gray-50">
-                          <div className="flex items-center gap-2">
-                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: d.color }} />
-                            <span className="text-sm font-medium text-gray-700">{d.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-sm font-bold">{fmt(d.sellAllVal)}</span>
-                            <span className="text-xs text-emerald-600 ml-2">{fmtPct(d.sellAllROI)}</span>
-                          </div>
-                        </div>
-                      ))}
-                      <div className="bg-amber-50 rounded-xl p-3">
-                        <p className="text-xs text-amber-800"><strong>Pros:</strong> Guaranteed returns, no market risk, immediate liquidity.</p>
-                        <p className="text-xs text-amber-800 mt-1"><strong>Cons:</strong> Miss potential post-IPO upside if stock appreciates.</p>
-                      </div>
-                    </div>
-                  </Card>
-
-                  {/* Strategy B */}
-                  <Card className="overflow-hidden">
-                    <div style={{ background: "linear-gradient(to right, #6366f1, #9333ea)" }} className="px-6 py-4">
-                      <h3 className="text-white font-bold text-lg">Strategy B: Sell {sellPct}%, Hold {100 - sellPct}%</h3>
-                      <p style={{ color: "rgba(255,255,255,0.8)" }} className="text-xs">Partial liquidity + upside exposure</p>
-                    </div>
-                    <div className="p-6" style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                      <div className="grid grid-cols-2 gap-3 text-center">
-                        <div className="bg-gray-50 rounded-xl p-3">
-                          <p className="text-xs text-gray-500 font-semibold">Cashed Out at IPO</p>
-                          <p className="text-xl font-black text-gray-900">{fmt(totals.sellPartVal)}</p>
-                        </div>
-                        <div className="bg-indigo-50 rounded-xl p-3">
-                          <p className="text-xs text-indigo-500 font-semibold">Value at +24m</p>
-                          <p className="text-xl font-black text-indigo-700">{fmt(totals.partialTotal24m)}</p>
-                        </div>
-                      </div>
-                      {investorData.map((d) => (
-                        <div key={d.id} className="flex items-center justify-between py-2 border-t border-gray-50">
-                          <div className="flex items-center gap-2">
-                            <div style={{ width: 10, height: 10, borderRadius: "50%", background: d.color }} />
-                            <span className="text-sm font-medium text-gray-700">{d.name}</span>
-                            <span className="text-xs text-gray-400">({d.sharesToSell} sell / {d.sharesToKeep} hold)</span>
-                          </div>
-                          <span className="text-sm font-bold">{fmt(d.partialTotal24m)}</span>
-                        </div>
-                      ))}
-                      <div className="bg-indigo-50 rounded-xl p-3">
-                        <p className="text-xs text-indigo-800"><strong>Pros:</strong> Some guaranteed gains + exposure to further upside.</p>
-                        <p className="text-xs text-indigo-800 mt-1"><strong>Cons:</strong> Post-IPO lock-up risk; most fintech stocks traded below IPO price in 2025.</p>
-                      </div>
-                    </div>
-                  </Card>
+              <Card className="p-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">{"Strategy: Sell "+sellPct+"% at IPO, Hold "+(100-sellPct)+"%"}</h2>
+                    <p className="text-sm text-gray-500 mt-1">Adjust the slider to compare selling all shares at IPO vs. holding some for post-IPO upside</p>
+                  </div>
+                  <div className="flex items-center gap-4 min-w-[300px]">
+                    <span className="text-xs font-semibold text-gray-500">SELL</span>
+                    <input type="range" min="0" max="100" step="5" value={sellPct} onChange={function(e){ setSellPct(Number(e.target.value)); }}
+                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
+                    <span className="text-sm font-bold text-indigo-600">{sellPct+"%"}</span>
+                  </div>
                 </div>
+              </Card>
 
-                {/* Timeline Chart */}
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-1">Strategy Value Over Time ({scenario.name})</h3>
-                  <p className="text-xs text-gray-500 mb-4">Projected portfolio value based on historical post-IPO patterns for comparable fintech IPOs</p>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <AreaChart data={timelineData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="gradSellAll" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="gradPartial" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => "\u20AC" + (v / 1000).toFixed(0) + "k"} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Area type="monotone" dataKey="Sell All at IPO" stroke="#f59e0b" fill="url(#gradSellAll)" strokeWidth={2.5} dot={{ r: 4 }} />
-                      <Area type="monotone" dataKey={"Sell " + sellPct + "% + Hold"} stroke="#6366f1" fill="url(#gradPartial)" strokeWidth={2.5} dot={{ r: 4 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </Card>
-
-                {/* Individual Investor Breakdown */}
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-4">Per-Investor: IPO Proceeds Breakdown</h3>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={investorCompareData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => "\u20AC" + (v / 1000).toFixed(0) + "k"} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      <Bar dataKey="Cost Basis" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Sell All at IPO" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey={"Partial (" + sellPct + "%) + Hold 24m"} fill="#6366f1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
-
-                {/* Post-IPO Projection Table */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Strategy A */}
                 <Card className="overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="font-bold text-gray-900">Detailed Post-IPO Projections ({scenario.name})</h3>
-                    <p className="text-xs text-gray-500 mt-1">Value of held shares over time if you sell {sellPct}% at IPO</p>
+                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
+                    <h3 className="text-white font-bold text-lg">Strategy A: Sell 100% at IPO</h3>
+                    <p className="text-white/80 text-xs">Immediate liquidity, zero post-IPO risk</p>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          {["Investor", "Shares Sold", "IPO Cash", "Held Shares", "+6m Total", "+12m Total", "+18m Total", "+24m Total"].map((h, i) => (
-                            <th key={i} className={`${i === 0 ? "text-left px-6" : "text-right px-4"} py-3 font-semibold text-gray-500 uppercase text-xs`}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {investorData.map((d) => (
-                          <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50">
-                            <td className="px-6 py-3 font-semibold">{d.name}</td>
-                            <td className="text-right px-4 py-3">{d.sharesToSell}</td>
-                            <td className="text-right px-4 py-3 font-medium">{fmt(d.sellPartVal)}</td>
-                            <td className="text-right px-4 py-3">{d.sharesToKeep}</td>
-                            <td className="text-right px-4 py-3">{fmt(d.partialTotal6m)}</td>
-                            <td className="text-right px-4 py-3">{fmt(d.partialTotal12m)}</td>
-                            <td className="text-right px-4 py-3">{fmt(d.partialTotal18m)}</td>
-                            <td className="text-right px-4 py-3 font-bold">{fmt(d.partialTotal24m)}</td>
-                          </tr>
-                        ))}
-                        <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
-                          <td className="px-6 py-3">Total</td>
-                          <td className="text-right px-4 py-3">{investorData.reduce((s, d) => s + d.sharesToSell, 0)}</td>
-                          <td className="text-right px-4 py-3">{fmt(totals.sellPartVal)}</td>
-                          <td className="text-right px-4 py-3">{investorData.reduce((s, d) => s + d.sharesToKeep, 0)}</td>
-                          <td className="text-right px-4 py-3">{fmt(totals.partialTotal6m)}</td>
-                          <td className="text-right px-4 py-3">{fmt(totals.partialTotal12m)}</td>
-                          <td className="text-right px-4 py-3">{fmt(totals.partialTotal18m)}</td>
-                          <td className="text-right px-4 py-3">{fmt(totals.partialTotal24m)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div className="p-6 space-y-4">
+                    <div className="text-center py-3">
+                      <p className="text-3xl font-black text-gray-900">{fmt(totals.sellAllVal)}</p>
+                      <p className="text-sm text-emerald-600 font-semibold mt-1">{fmtPct(((totals.sellAllVal/totals.costBasis)-1)*100)+" return \u00B7 "+fmtX(totals.sellAllVal/totals.costBasis)+" multiple"}</p>
+                    </div>
+                    {investorData.map(function(d){ return <div key={d.id} className="flex items-center justify-between py-2 border-t border-gray-50">
+                      <div className="flex items-center gap-2"><Dot color={d.color} /><span className="text-sm font-medium text-gray-700">{d.name}</span></div>
+                      <div className="text-right"><span className="text-sm font-bold">{fmt(d.sellAllVal)}</span><span className="text-xs text-emerald-600 ml-2">{fmtPct(d.sellAllROI)}</span></div>
+                    </div>; })}
+                    <div className="bg-amber-50 rounded-xl p-3"><p className="text-xs text-amber-800"><strong>Pros:</strong> Guaranteed returns, no market risk, immediate liquidity.</p><p className="text-xs text-amber-800 mt-1"><strong>Cons:</strong> Miss potential post-IPO upside if stock appreciates.</p></div>
                   </div>
                 </Card>
-
-                {/* Decision Framework */}
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-4">Decision Framework</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[
-                      { title: "If You Believe Bear Case", text: "Sell 100% at IPO. Historical data shows most fintech IPOs have traded below listing price within 6 months. Klarna is currently ~50% below its IPO price. Lock in your " + fmtX(totals.currentVal / totals.costBasis) + " return.", border: "border-red-100", bg: "rgba(254,242,242,0.3)", titleColor: "text-red-800", textColor: "text-red-700" },
-                      { title: "If You Believe Base Case", text: "Sell 50-75% at IPO, hold the rest. This locks in significant gains while keeping exposure to potential upside. Revolut's strong revenue growth could support the valuation.", border: "border-amber-100", bg: "rgba(255,251,235,0.3)", titleColor: "text-amber-800", textColor: "text-amber-700" },
-                      { title: "If You Believe Bull Case", text: "Sell 25-50% at IPO. Nubank went from $45B IPO to $90B+ market cap. If Revolut executes on its $9B revenue target, significant upside remains.", border: "border-emerald-100", bg: "rgba(236,253,245,0.3)", titleColor: "text-emerald-800", textColor: "text-emerald-700" },
-                    ].map((f, i) => (
-                      <div key={i} className={`border-2 ${f.border} rounded-xl p-4`} style={{ background: f.bg }}>
-                        <p className={`font-bold ${f.titleColor} text-sm mb-2`}>{f.title}</p>
-                        <p className={`text-xs ${f.textColor} leading-relaxed`}>{f.text}</p>
-                      </div>
-                    ))}
+                {/* Strategy B */}
+                <Card className="overflow-hidden">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
+                    <h3 className="text-white font-bold text-lg">{"Strategy B: Sell "+sellPct+"%, Hold "+(100-sellPct)+"%"}</h3>
+                    <p className="text-white/80 text-xs">Partial liquidity + upside exposure</p>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <div className="grid grid-cols-2 gap-3 text-center">
+                      <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500 font-semibold">Cashed Out at IPO</p><p className="text-xl font-black text-gray-900">{fmt(totals.sellPartVal)}</p></div>
+                      <div className="bg-indigo-50 rounded-xl p-3"><p className="text-xs text-indigo-500 font-semibold">Value at +24m</p><p className="text-xl font-black text-indigo-700">{fmt(totals.partialTotal24m)}</p></div>
+                    </div>
+                    {investorData.map(function(d){ return <div key={d.id} className="flex items-center justify-between py-2 border-t border-gray-50">
+                      <div className="flex items-center gap-2"><Dot color={d.color} /><span className="text-sm font-medium text-gray-700">{d.name}</span><span className="text-xs text-gray-400">{" ("+d.sharesToSell+" sell / "+d.sharesToKeep+" hold)"}</span></div>
+                      <span className="text-sm font-bold">{fmt(d.partialTotal24m)}</span>
+                    </div>; })}
+                    <div className="bg-indigo-50 rounded-xl p-3"><p className="text-xs text-indigo-800"><strong>Pros:</strong> Some guaranteed gains + exposure to further upside.</p><p className="text-xs text-indigo-800 mt-1"><strong>Cons:</strong> Post-IPO lock-up risk; most fintech stocks traded below IPO price in 2025.</p></div>
                   </div>
                 </Card>
               </div>
-            )}
 
-            {/* ── TAB: COMPARABLES ────────────────────────────── */}
-            {activeTab === "comparables" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-1">Comparable Fintech IPO Performance</h3>
-                  <p className="text-xs text-gray-500 mb-4">Return from IPO price at various time horizons</p>
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart data={comparableData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v + "%"} />
-                      <Tooltip formatter={(v) => v + "%"} />
-                      <Legend />
-                      <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
-                      <Bar dataKey="First Day" fill="#6366f1" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="6 Months" fill="#f59e0b" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="Current" fill="#22c55e" radius={[3, 3, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
+              {/* Timeline */}
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-1">{"Strategy Value Over Time ("+scenario.name+")"}</h3>
+                <p className="text-xs text-gray-500 mb-4">Projected portfolio value based on historical post-IPO patterns for comparable fintech IPOs</p>
+                <ResponsiveContainer width="100%" height={350}>
+                  <AreaChart data={timelineData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
+                      <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} /></linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={eurFmt} />
+                    <Tooltip content={<TT />} /><Legend />
+                    <Area type="monotone" dataKey="Sell All at IPO" stroke="#f59e0b" fill="url(#gA)" strokeWidth={2.5} dot={{ r: 4 }} />
+                    <Area type="monotone" dataKey={holdLabel} stroke="#6366f1" fill="url(#gB)" strokeWidth={2.5} dot={{ r: 4 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {COMPARABLE_IPOS.map((c, i) => (
-                    <Card key={i} className="p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="font-bold text-gray-900">{c.name}</h4>
-                        <Badge color="blue">{c.valAtIPO}</Badge>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[
-                          { label: "Day 1", val: c.firstDay }, { label: "6m", val: c.month6 },
-                          { label: "12m", val: c.month12 }, { label: "Current", val: c.current },
-                        ].map((m, j) => (
-                          <div key={j} className="text-center bg-gray-50 rounded-lg p-2">
-                            <p className="text-xs text-gray-400 font-semibold">{m.label}</p>
-                            <p className={`text-sm font-bold ${m.val == null ? "text-gray-300" : m.val >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                              {m.val == null ? "N/A" : fmtPct(m.val)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  ))}
+              {/* Per-investor bars */}
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-4">Per-Investor: IPO Proceeds Breakdown</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={barData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={eurFmt} />
+                    <Tooltip content={<TT />} /><Legend />
+                    <Bar dataKey="Cost Basis" fill="#cbd5e1" radius={[4,4,0,0]} />
+                    <Bar dataKey="Sell All at IPO" fill="#f59e0b" radius={[4,4,0,0]} />
+                    <Bar dataKey={"Partial ("+sellPct+"%) +24m"} fill="#6366f1" radius={[4,4,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* Projection table */}
+              <Card className="overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100">
+                  <h3 className="font-bold text-gray-900">{"Detailed Post-IPO Projections ("+scenario.name+")"}</h3>
+                  <p className="text-xs text-gray-500 mt-1">{"Value of held shares over time if you sell "+sellPct+"% at IPO"}</p>
                 </div>
+                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50">
+                  {["Investor","Sold","IPO Cash","Held","+6m","+12m","+18m","+24m"].map(function(h,i){
+                    return <th key={i} className={(i===0?"text-left px-6":"text-right px-4")+" py-3 font-semibold text-gray-500 uppercase text-xs"}>{h}</th>;
+                  })}
+                </tr></thead><tbody>
+                  {investorData.map(function(d){ return <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50/50">
+                    <td className="px-6 py-3 font-semibold">{d.name}</td><td className="text-right px-4 py-3">{d.sharesToSell}</td>
+                    <td className="text-right px-4 py-3 font-medium">{fmt(d.sellPartVal)}</td><td className="text-right px-4 py-3">{d.sharesToKeep}</td>
+                    <td className="text-right px-4 py-3">{fmt(d.partialTotal6m)}</td><td className="text-right px-4 py-3">{fmt(d.partialTotal12m)}</td>
+                    <td className="text-right px-4 py-3">{fmt(d.partialTotal18m)}</td><td className="text-right px-4 py-3 font-bold">{fmt(d.partialTotal24m)}</td>
+                  </tr>; })}
+                  <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
+                    <td className="px-6 py-3">Total</td>
+                    <td className="text-right px-4 py-3">{investorData.reduce(function(s,d){return s+d.sharesToSell;},0)}</td>
+                    <td className="text-right px-4 py-3">{fmt(totals.sellPartVal)}</td>
+                    <td className="text-right px-4 py-3">{investorData.reduce(function(s,d){return s+d.sharesToKeep;},0)}</td>
+                    <td className="text-right px-4 py-3">{fmt(totals.partialTotal6m)}</td><td className="text-right px-4 py-3">{fmt(totals.partialTotal12m)}</td>
+                    <td className="text-right px-4 py-3">{fmt(totals.partialTotal18m)}</td><td className="text-right px-4 py-3">{fmt(totals.partialTotal24m)}</td>
+                  </tr>
+                </tbody></table></div>
+              </Card>
 
-                {/* Key Takeaways */}
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-3">Key Takeaways for Revolut</h3>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    {[
-                      { color: "#dc2626", bg: "#fee2e2", icon: "!", text: "Post-IPO pattern is bearish: Nearly every fintech that went public in 2025 now trades below its IPO price. Klarna is at -50%, and the sector faces ongoing valuation pressure." },
-                      { color: "#d97706", bg: "#fef3c7", icon: "~", text: "EV/Revenue multiple is stretched: At 18.3x revenue, Revolut trades at ~4x the industry peer median. This is justified only if Revolut delivers on its ambitious $9B revenue target for 2026." },
-                      { color: "#059669", bg: "#d1fae5", icon: "+", text: "Long-term bull case exists: Nubank recovered from its post-IPO decline and now trades 56% above its IPO price. If Revolut follows a similar trajectory, holding could be very rewarding." },
-                      { color: "#4f46e5", bg: "#e0e7ff", icon: "i", text: "Your position is exceptional: Batch 1 (Occhino) is sitting on a ~" + fmtX(CURRENT_PRICE_GBP / 8.57) + " multiple from entry. Even in a bear IPO scenario, the returns are extraordinary." },
-                    ].map((t, i) => (
-                      <div key={i} className="flex gap-3 items-start">
-                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: t.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
-                          <span style={{ color: t.color, fontSize: 12, fontWeight: 700 }}>{t.icon}</span>
-                        </div>
-                        <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: "<strong>" + t.text.split(":")[0] + ":</strong>" + t.text.split(":").slice(1).join(":") }} />
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+              {/* Decision framework */}
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-4">Decision Framework</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="border-2 border-red-100 rounded-xl p-4 bg-red-50/30"><p className="font-bold text-red-800 text-sm mb-2">If You Believe Bear Case</p><p className="text-xs text-red-700 leading-relaxed">{"Sell 100% at IPO. Historical data shows most fintech IPOs have traded below listing price within 6 months. Klarna is currently ~50% below its IPO price. Lock in your "+fmtX(totals.currentVal/totals.costBasis)+" return."}</p></div>
+                  <div className="border-2 border-amber-100 rounded-xl p-4 bg-amber-50/30"><p className="font-bold text-amber-800 text-sm mb-2">If You Believe Base Case</p><p className="text-xs text-amber-700 leading-relaxed">Sell 50-75% at IPO, hold the rest. This locks in significant gains while keeping exposure to potential upside. Revolut's strong revenue growth could support the valuation.</p></div>
+                  <div className="border-2 border-emerald-100 rounded-xl p-4 bg-emerald-50/30"><p className="font-bold text-emerald-800 text-sm mb-2">If You Believe Bull Case</p><p className="text-xs text-emerald-700 leading-relaxed">Sell 25-50% at IPO. Nubank went from $45B IPO to $90B+ market cap. If Revolut executes on its $9B revenue target, significant upside remains.</p></div>
+                </div>
+              </Card>
+            </div>}
 
-                {/* Valuation Comparison Table */}
-                <Card className="overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-100">
-                    <h3 className="font-bold text-gray-900">Revolut vs. Public Bank Valuations</h3>
+            {/* ═══════════════ COMPARABLES ═══════════════ */}
+            {activeTab === "comparables" && <div className="space-y-6">
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-1">Comparable Fintech IPO Performance</h3>
+                <p className="text-xs text-gray-500 mb-4">Return from IPO price at various time horizons</p>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart data={comparableData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={pctFmt} />
+                    <Tooltip formatter={function(v){ return v+"%"; }} /><Legend />
+                    <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
+                    <Bar dataKey="First Day" fill="#6366f1" radius={[3,3,0,0]} />
+                    <Bar dataKey="6 Months" fill="#f59e0b" radius={[3,3,0,0]} />
+                    <Bar dataKey="Current" fill="#22c55e" radius={[3,3,0,0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {COMPARABLE_IPOS.map(function(c,i){ return <Card key={i} className="p-5">
+                  <div className="flex items-center justify-between mb-3"><h4 className="font-bold text-gray-900">{c.name}</h4><Badge color="blue">{c.valAtIPO}</Badge></div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[{l:"Day 1",v:c.firstDay},{l:"6m",v:c.month6},{l:"12m",v:c.month12},{l:"Current",v:c.current}].map(function(m,j){
+                      return <div key={j} className="text-center bg-gray-50 rounded-lg p-2">
+                        <p className="text-xs text-gray-400 font-semibold">{m.l}</p>
+                        <p className={"text-sm font-bold "+(m.v==null?"text-gray-300":m.v>=0?"text-emerald-600":"text-red-500")}>{m.v==null?"N/A":fmtPct(m.v)}</p>
+                      </div>;
+                    })}
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          {["Company", "Market Cap", "Revenue", "EV/Revenue", "Customers"].map((h, i) => (
-                            <th key={i} className={`${i === 0 ? "text-left px-6" : "text-right px-4"} py-3 font-semibold text-gray-500 uppercase text-xs`}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[
-                          { name: "Revolut (Private)", cap: "$75B", rev: "$4B", evr: "18.3x", cust: "65M+", hl: true },
-                          { name: "Nubank", cap: "$90B", rev: "$11.5B", evr: "7.8x", cust: "127M+" },
-                          { name: "Barclays", cap: "~$55B", rev: "~$30B", evr: "1.8x", cust: "48M+" },
-                          { name: "Societe Generale", cap: "~$40B", rev: "~$28B", evr: "1.4x", cust: "25M+" },
-                          { name: "Robinhood", cap: "~$45B", rev: "$3.8B", evr: "11.8x", cust: "22M+" },
-                        ].map((r, i) => (
-                          <tr key={i} className="border-t border-gray-50" style={r.hl ? { background: "rgba(238,242,255,0.5)" } : {}}>
-                            <td className={`px-6 py-3 ${r.hl ? "font-bold text-indigo-700" : "font-medium"}`}>{r.name}</td>
-                            <td className="text-right px-4 py-3">{r.cap}</td>
-                            <td className="text-right px-4 py-3">{r.rev}</td>
-                            <td className="text-right px-4 py-3 font-semibold">{r.evr}</td>
-                            <td className="text-right px-4 py-3">{r.cust}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
+                </Card>; })}
               </div>
-            )}
 
-            {/* Footer Disclaimer */}
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-3">Key Takeaways for Revolut</h3>
+                <div className="space-y-3">
+                  {[
+                    {c:"#dc2626",bg:"#fee2e2",ic:"!",t:"Post-IPO pattern is bearish",d:"Nearly every fintech that went public in 2025 now trades below its IPO price. Klarna is at -50%, and the sector faces ongoing valuation pressure."},
+                    {c:"#d97706",bg:"#fef3c7",ic:"~",t:"EV/Revenue multiple is stretched",d:"At 18.3x revenue, Revolut trades at ~4x the industry peer median. This is justified only if Revolut delivers on its ambitious $9B revenue target for 2026."},
+                    {c:"#059669",bg:"#d1fae5",ic:"+",t:"Long-term bull case exists",d:"Nubank recovered from its post-IPO decline and now trades 56% above its IPO price. If Revolut follows a similar trajectory, holding could be very rewarding."},
+                    {c:"#4f46e5",bg:"#e0e7ff",ic:"i",t:"Your position is exceptional",d:"Batch 1 (Occhino) is sitting on a ~"+fmtX(CURRENT_PRICE_GBP/8.57)+" multiple from entry. Even in a bear IPO scenario, the returns are extraordinary."},
+                  ].map(function(t,i){ return <div key={i} className="flex gap-3 items-start">
+                    <div style={{width:24,height:24,borderRadius:"50%",background:t.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}><span style={{color:t.c,fontSize:12,fontWeight:700}}>{t.ic}</span></div>
+                    <p className="text-sm text-gray-700"><strong>{t.t}:</strong> {t.d}</p>
+                  </div>; })}
+                </div>
+              </Card>
+
+              <Card className="overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-bold text-gray-900">Revolut vs. Public Bank Valuations</h3></div>
+                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50">
+                  {["Company","Market Cap","Revenue","EV/Revenue","Customers"].map(function(h,i){
+                    return <th key={i} className={(i===0?"text-left px-6":"text-right px-4")+" py-3 font-semibold text-gray-500 uppercase text-xs"}>{h}</th>;
+                  })}
+                </tr></thead><tbody>
+                  {[
+                    {n:"Revolut (Private)",c:"$75B",r:"$4B",e:"18.3x",u:"65M+",hl:true},
+                    {n:"Nubank",c:"$90B",r:"$11.5B",e:"7.8x",u:"127M+"},
+                    {n:"Barclays",c:"~$55B",r:"~$30B",e:"1.8x",u:"48M+"},
+                    {n:"Societe Generale",c:"~$40B",r:"~$28B",e:"1.4x",u:"25M+"},
+                    {n:"Robinhood",c:"~$45B",r:"$3.8B",e:"11.8x",u:"22M+"},
+                  ].map(function(r,i){ return <tr key={i} className={"border-t border-gray-50 "+(r.hl?"bg-indigo-50/50":"hover:bg-gray-50/50")}>
+                    <td className={"px-6 py-3 "+(r.hl?"font-bold text-indigo-700":"font-medium")}>{r.n}</td>
+                    <td className="text-right px-4 py-3">{r.c}</td><td className="text-right px-4 py-3">{r.r}</td>
+                    <td className="text-right px-4 py-3 font-semibold">{r.e}</td><td className="text-right px-4 py-3">{r.u}</td>
+                  </tr>; })}
+                </tbody></table></div>
+              </Card>
+            </div>}
+
+            {/* Footer */}
             <div className="bg-gray-50 rounded-2xl p-5 mt-8">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                <strong>Disclaimer:</strong> This dashboard is for informational and discussion purposes only. It does not constitute financial advice.
-                Post-IPO projections are based on historical patterns from comparable fintech IPOs (Nubank, Robinhood, Klarna, Chime) and may not reflect
-                actual future performance. All values are estimates using a GBP/EUR rate of {GBP_EUR}. Tax implications, lock-up periods, and transaction
-                costs are not modeled. Consult a qualified financial advisor before making investment decisions. Data sourced from public filings,
-                secondary market transactions, and analyst reports as of February 2026.
-              </p>
+              <p className="text-xs text-gray-400 leading-relaxed"><strong>Disclaimer:</strong> This dashboard is for informational and discussion purposes only. It does not constitute financial advice. Post-IPO projections are based on historical patterns from comparable fintech IPOs (Nubank, Robinhood, Klarna, Chime) and may not reflect actual future performance. All values are estimates using a GBP/EUR rate of {GBP_EUR}. Tax implications, lock-up periods, and transaction costs are not modeled. Consult a qualified financial advisor before making investment decisions. Data sourced from public filings, secondary market transactions, and analyst reports as of February 2026.</p>
             </div>
           </div>
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<RevolutIPODashboard />);
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
   </script>
 </body>
 </html>
-
