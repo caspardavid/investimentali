@@ -8,12 +8,9 @@
   <script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
   <!-- Recharts peer deps + Recharts UMD -->
-  <script crossorigin src="https://unpkg.com/react-is@18.2.0/umd/react-is.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
   <script crossorigin src="https://unpkg.com/recharts@2.13.3/umd/Recharts.js"></script>
-  <!-- Babel for in-browser JSX -->
-  <script crossorigin src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
-  <!-- Tailwind CSS (Play CDN — JIT in browser) -->
+  <!-- Tailwind CSS (Play CDN) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -69,7 +66,7 @@
       </form>
       <div id="gate-error" class="gate-error">Incorrect password. Please try again.</div>
     </div>
-  </div>
+
 
   <!-- Dashboard (hidden until unlocked) -->
   <div id="root" style="display:none"></div>
@@ -101,506 +98,1196 @@
     }
   </script>
 
-  <script type="text/babel">
-    const { useState, useMemo } = React;
-    const {
-      BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-      ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart, ReferenceLine
-    } = Recharts;
+  <script>
+const {
+  useState,
+  useMemo
+} = React;
+const {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Area,
+  AreaChart,
+  ReferenceLine
+} = Recharts;
 
-    // ── Data ───────────────────────────────────────────────
-    const GBP_EUR = 1.1512;
-    const CURRENT_PRICE_GBP = 1054.44;
-    const CURRENT_PRICE_EUR = CURRENT_PRICE_GBP * GBP_EUR;
+// ── Data ───────────────────────────────────────────────
+const GBP_EUR = 1.1512;
+const CURRENT_PRICE_GBP = 1054.44;
+const CURRENT_PRICE_EUR = CURRENT_PRICE_GBP * GBP_EUR;
+const INVESTORS = [{
+  id: "occhino",
+  name: "Occhino",
+  shares: 100,
+  purchasePriceGBP: 8.57,
+  batch: 1,
+  color: "#6366f1"
+}, {
+  id: "rovera",
+  name: "Rovera",
+  shares: 8,
+  purchasePriceGBP: 65.75,
+  batch: 2,
+  color: "#06b6d4"
+}, {
+  id: "trombetta",
+  name: "Trombetta",
+  shares: 8,
+  purchasePriceGBP: 65.75,
+  batch: 2,
+  color: "#8b5cf6"
+}];
+const TOTAL_SHARES = INVESTORS.reduce((s, i) => s + i.shares, 0);
+const SCENARIOS = [{
+  id: "bear",
+  name: "Bear Case",
+  tag: "Conservative",
+  emoji: "\u{1F43B}",
+  multiplier: 0.80,
+  desc: "IPO priced at ~20% discount to last private round. Reflects Klarna-style markdown, investor caution around high EV/Revenue multiples (18x), and post-2025 fintech IPO fatigue.",
+  postIpo: {
+    m6: -0.20,
+    m12: -0.35,
+    m18: -0.25,
+    m24: -0.10
+  },
+  reference: "Klarna: IPO at $15B, now trading ~50% below IPO price",
+  color: "#ef4444"
+}, {
+  id: "base",
+  name: "Base Case",
+  tag: "Expected",
+  emoji: "\u{1F4CA}",
+  multiplier: 1.0,
+  desc: "IPO at current $75B private valuation. Orderly listing with moderate first-day pop, then typical post-IPO volatility. Assumes stable macro conditions and continued revenue growth to $9B target.",
+  postIpo: {
+    m6: -0.10,
+    m12: -0.05,
+    m18: 0.10,
+    m24: 0.25
+  },
+  reference: "Nubank: IPO'd at fair value, now +56% from listing price after 4 years",
+  color: "#f59e0b"
+}, {
+  id: "bull",
+  name: "Bull Case",
+  tag: "Optimistic",
+  emoji: "\u{1F402}",
+  multiplier: 1.45,
+  desc: "Strong demand drives IPO at $100B+ valuation. Reflects Revolut hitting $9B revenue target, favorable market window, high oversubscription, and significant first-day pop (~20%).",
+  postIpo: {
+    m6: 0.05,
+    m12: 0.15,
+    m18: 0.30,
+    m24: 0.55
+  },
+  reference: "Nubank long-term: grew from $45B IPO to $90B+ market cap",
+  color: "#22c55e"
+}];
+const COMPARABLE_IPOS = [{
+  name: "Nubank (2021)",
+  firstDay: 15,
+  month6: -20,
+  month12: -40,
+  month24: 10,
+  current: 56,
+  valAtIPO: "$45B"
+}, {
+  name: "Robinhood (2021)",
+  firstDay: -8,
+  month6: -65,
+  month12: -75,
+  month24: -55,
+  current: -10,
+  valAtIPO: "$32B"
+}, {
+  name: "Klarna (2025)",
+  firstDay: 15,
+  month6: -35,
+  month12: -50,
+  month24: null,
+  current: -50,
+  valAtIPO: "$15B"
+}, {
+  name: "Chime (2025)",
+  firstDay: 12,
+  month6: -15,
+  month12: null,
+  month24: null,
+  current: -15,
+  valAtIPO: "$25B"
+}];
 
-    const INVESTORS = [
-      { id: "occhino", name: "Occhino", shares: 100, purchasePriceGBP: 8.57, batch: 1, color: "#6366f1" },
-      { id: "rovera", name: "Rovera", shares: 8, purchasePriceGBP: 65.75, batch: 2, color: "#06b6d4" },
-      { id: "trombetta", name: "Trombetta", shares: 8, purchasePriceGBP: 65.75, batch: 2, color: "#8b5cf6" },
-    ];
-    const TOTAL_SHARES = INVESTORS.reduce((s, i) => s + i.shares, 0);
+// ── Formatters ─────────────────────────────────────────
+const fmt = (n, dec) => new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: dec || 0,
+  maximumFractionDigits: dec || 0
+}).format(n);
+const fmtGBP = (n, dec) => new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  minimumFractionDigits: dec || 0,
+  maximumFractionDigits: dec || 0
+}).format(n);
+const fmtPct = n => (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
+const fmtX = n => n.toFixed(0) + "x";
 
-    const SCENARIOS = [
-      { id: "bear", name: "Bear Case", tag: "Conservative", emoji: "\u{1F43B}", multiplier: 0.80,
-        desc: "IPO priced at ~20% discount to last private round. Reflects Klarna-style markdown, investor caution around high EV/Revenue multiples (18x), and post-2025 fintech IPO fatigue.",
-        postIpo: { m6: -0.20, m12: -0.35, m18: -0.25, m24: -0.10 },
-        reference: "Klarna: IPO at $15B, now trading ~50% below IPO price", color: "#ef4444" },
-      { id: "base", name: "Base Case", tag: "Expected", emoji: "\u{1F4CA}", multiplier: 1.0,
-        desc: "IPO at current $75B private valuation. Orderly listing with moderate first-day pop, then typical post-IPO volatility. Assumes stable macro conditions and continued revenue growth to $9B target.",
-        postIpo: { m6: -0.10, m12: -0.05, m18: 0.10, m24: 0.25 },
-        reference: "Nubank: IPO'd at fair value, now +56% from listing price after 4 years", color: "#f59e0b" },
-      { id: "bull", name: "Bull Case", tag: "Optimistic", emoji: "\u{1F402}", multiplier: 1.45,
-        desc: "Strong demand drives IPO at $100B+ valuation. Reflects Revolut hitting $9B revenue target, favorable market window, high oversubscription, and significant first-day pop (~20%).",
-        postIpo: { m6: 0.05, m12: 0.15, m18: 0.30, m24: 0.55 },
-        reference: "Nubank long-term: grew from $45B IPO to $90B+ market cap", color: "#22c55e" },
-    ];
-
-    const COMPARABLE_IPOS = [
-      { name: "Nubank (2021)", firstDay: 15, month6: -20, month12: -40, month24: 10, current: 56, valAtIPO: "$45B" },
-      { name: "Robinhood (2021)", firstDay: -8, month6: -65, month12: -75, month24: -55, current: -10, valAtIPO: "$32B" },
-      { name: "Klarna (2025)", firstDay: 15, month6: -35, month12: -50, month24: null, current: -50, valAtIPO: "$15B" },
-      { name: "Chime (2025)", firstDay: 12, month6: -15, month12: null, month24: null, current: -15, valAtIPO: "$25B" },
-    ];
-
-    // ── Formatters ─────────────────────────────────────────
-    const fmt = (n, dec) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "EUR", minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }).format(n);
-    const fmtGBP = (n, dec) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", minimumFractionDigits: dec || 0, maximumFractionDigits: dec || 0 }).format(n);
-    const fmtPct = (n) => (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
-    const fmtX = (n) => n.toFixed(0) + "x";
-
-    // ── Tiny UI helpers ────────────────────────────────────
-    function Card({ children, className }) {
-      return <div className={"bg-white rounded-2xl shadow-sm border border-gray-100 " + (className || "")}>{children}</div>;
+// ── Tiny UI helpers ────────────────────────────────────
+function Card({
+  children,
+  className
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "bg-white rounded-2xl shadow-sm border border-gray-100 " + (className || "")
+  }, children);
+}
+function Badge({
+  children,
+  color
+}) {
+  const m = {
+    green: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    red: "bg-red-50 text-red-700 border-red-200",
+    blue: "bg-blue-50 text-blue-700 border-blue-200",
+    amber: "bg-amber-50 text-amber-700 border-amber-200",
+    gray: "bg-gray-50 text-gray-700 border-gray-200",
+    indigo: "bg-indigo-50 text-indigo-700 border-indigo-200"
+  };
+  return /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-semibold px-2 py-0.5 rounded-full border " + (m[color] || m.gray)
+  }, children);
+}
+function Dot({
+  color,
+  size
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      width: size || 10,
+      height: size || 10,
+      borderRadius: "50%",
+      background: color,
+      flexShrink: 0
     }
-    function Badge({ children, color }) {
-      const m = { green: "bg-emerald-50 text-emerald-700 border-emerald-200", red: "bg-red-50 text-red-700 border-red-200",
-        blue: "bg-blue-50 text-blue-700 border-blue-200", amber: "bg-amber-50 text-amber-700 border-amber-200",
-        gray: "bg-gray-50 text-gray-700 border-gray-200", indigo: "bg-indigo-50 text-indigo-700 border-indigo-200" };
-      return <span className={"text-xs font-semibold px-2 py-0.5 rounded-full border " + (m[color] || m.gray)}>{children}</span>;
+  });
+}
+
+// ── Tooltip ────────────────────────────────────────────
+function TT({
+  active,
+  payload,
+  label
+}) {
+  if (!active || !payload) return null;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: "#fff",
+      padding: 12,
+      borderRadius: 12,
+      boxShadow: "0 4px 12px rgba(0,0,0,.1)",
+      border: "1px solid #f0f0f0",
+      fontSize: 13
     }
-    function Dot({ color, size }) {
-      return <div style={{ width: size || 10, height: size || 10, borderRadius: "50%", background: color, flexShrink: 0 }} />;
+  }, /*#__PURE__*/React.createElement("p", {
+    style: {
+      fontWeight: 600,
+      color: "#1f2937",
+      marginBottom: 4
     }
+  }, label), payload.map(function (p, i) {
+    return /*#__PURE__*/React.createElement("p", {
+      key: i,
+      style: {
+        color: p.color,
+        fontWeight: 500,
+        margin: "2px 0"
+      }
+    }, p.name, ": ", typeof p.value === "number" && Math.abs(p.value) > 100 ? fmt(p.value) : p.value + "%");
+  }));
+}
 
-    // ── Tooltip ────────────────────────────────────────────
-    function TT({ active, payload, label }) {
-      if (!active || !payload) return null;
-      return (
-        <div style={{ background: "#fff", padding: 12, borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,.1)", border: "1px solid #f0f0f0", fontSize: 13 }}>
-          <p style={{ fontWeight: 600, color: "#1f2937", marginBottom: 4 }}>{label}</p>
-          {payload.map(function(p, i) {
-            return <p key={i} style={{ color: p.color, fontWeight: 500, margin: "2px 0" }}>
-              {p.name}: {typeof p.value === "number" && Math.abs(p.value) > 100 ? fmt(p.value) : p.value + "%"}
-            </p>;
-          })}
-        </div>
-      );
-    }
+// ══════════════════════════════════════════════════════
+//  MAIN DASHBOARD
+// ══════════════════════════════════════════════════════
+function App() {
+  const [activeScenario, setActiveScenario] = useState("base");
+  const [sellPct, setSellPct] = useState(50);
+  const [activeTab, setActiveTab] = useState("overview");
+  const scenario = SCENARIOS.find(function (s) {
+    return s.id === activeScenario;
+  });
+  const ipoPrice = CURRENT_PRICE_GBP * scenario.multiplier;
+  const ipoPriceEUR = ipoPrice * GBP_EUR;
 
-    // ══════════════════════════════════════════════════════
-    //  MAIN DASHBOARD
-    // ══════════════════════════════════════════════════════
-    function App() {
-      const [activeScenario, setActiveScenario] = useState("base");
-      const [sellPct, setSellPct] = useState(50);
-      const [activeTab, setActiveTab] = useState("overview");
-
-      const scenario = SCENARIOS.find(function(s){ return s.id === activeScenario; });
-      const ipoPrice = CURRENT_PRICE_GBP * scenario.multiplier;
-      const ipoPriceEUR = ipoPrice * GBP_EUR;
-
-      // ── Investor calcs ────────────────────────────────
-      const investorData = useMemo(function() {
-        return INVESTORS.map(function(inv) {
-          var costBasis = inv.shares * inv.purchasePriceGBP * GBP_EUR;
-          var currentVal = inv.shares * CURRENT_PRICE_EUR;
-          var currentGain = currentVal - costBasis;
-          var currentROI = ((currentVal / costBasis) - 1) * 100;
-          var sellAllVal = inv.shares * ipoPriceEUR;
-          var sellAllGain = sellAllVal - costBasis;
-          var sellAllROI = ((sellAllVal / costBasis) - 1) * 100;
-          var sharesToSell = Math.floor(inv.shares * (sellPct / 100));
-          var sharesToKeep = inv.shares - sharesToSell;
-          var sellPartVal = sharesToSell * ipoPriceEUR;
-          var kept6m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m6);
-          var kept12m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m12);
-          var kept18m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m18);
-          var kept24m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m24);
-          return Object.assign({}, inv, {
-            costBasis: costBasis, currentVal: currentVal, currentGain: currentGain, currentROI: currentROI,
-            sellAllVal: sellAllVal, sellAllGain: sellAllGain, sellAllROI: sellAllROI,
-            sharesToSell: sharesToSell, sharesToKeep: sharesToKeep, sellPartVal: sellPartVal,
-            kept6m: kept6m, kept12m: kept12m, kept18m: kept18m, kept24m: kept24m,
-            partialTotal6m: sellPartVal + kept6m, partialTotal12m: sellPartVal + kept12m,
-            partialTotal18m: sellPartVal + kept18m, partialTotal24m: sellPartVal + kept24m,
-          });
-        });
-      }, [activeScenario, sellPct]);
-
-      const totals = useMemo(function() {
-        var t = { costBasis: 0, currentVal: 0, sellAllVal: 0, partialTotal6m: 0, partialTotal12m: 0, partialTotal18m: 0, partialTotal24m: 0, sellPartVal: 0 };
-        investorData.forEach(function(d) {
-          t.costBasis += d.costBasis; t.currentVal += d.currentVal; t.sellAllVal += d.sellAllVal;
-          t.partialTotal6m += d.partialTotal6m; t.partialTotal12m += d.partialTotal12m;
-          t.partialTotal18m += d.partialTotal18m; t.partialTotal24m += d.partialTotal24m;
-          t.sellPartVal += d.sellPartVal;
-        });
-        t.sellAllGain = t.sellAllVal - t.costBasis;
-        t.currentGain = t.currentVal - t.costBasis;
-        return t;
-      }, [investorData]);
-
-      // ── Chart data ─────────────────────────────────────
-      var holdLabel = "Sell " + sellPct + "% + Hold";
-
-      const timelineData = useMemo(function() {
-        var pts = [
-          { n: "Cost Basis", t: -1 }, { n: "Current", t: 0 }, { n: "At IPO", t: 1 },
-          { n: "+6 Mo", t: 2 }, { n: "+12 Mo", t: 3 }, { n: "+18 Mo", t: 4 }, { n: "+24 Mo", t: 5 }
-        ];
-        return pts.map(function(p) {
-          var sa = p.t === -1 ? totals.costBasis : p.t === 0 ? totals.currentVal : totals.sellAllVal;
-          var pa;
-          if (p.t === -1) pa = totals.costBasis;
-          else if (p.t === 0) pa = totals.currentVal;
-          else if (p.t === 1) { pa = totals.sellPartVal; investorData.forEach(function(d){ pa += d.sharesToKeep * ipoPriceEUR; }); }
-          else if (p.t === 2) pa = totals.partialTotal6m;
-          else if (p.t === 3) pa = totals.partialTotal12m;
-          else if (p.t === 4) pa = totals.partialTotal18m;
-          else pa = totals.partialTotal24m;
-          var obj = { name: p.n }; obj["Sell All at IPO"] = sa; obj[holdLabel] = pa;
-          return obj;
-        });
-      }, [totals, investorData, sellPct]);
-
-      const barData = useMemo(function() {
-        return investorData.map(function(d) {
-          var obj = { name: d.name, "Cost Basis": Math.round(d.costBasis), "Sell All at IPO": Math.round(d.sellAllVal) };
-          obj["Partial (" + sellPct + "%) +24m"] = Math.round(d.partialTotal24m);
-          return obj;
-        });
-      }, [investorData, sellPct]);
-
-      var comparableData = COMPARABLE_IPOS.map(function(c) {
-        return { name: c.name, "First Day": c.firstDay, "6 Months": c.month6, "Current": c.current };
+  // ── Investor calcs ────────────────────────────────
+  const investorData = useMemo(function () {
+    return INVESTORS.map(function (inv) {
+      var costBasis = inv.shares * inv.purchasePriceGBP * GBP_EUR;
+      var currentVal = inv.shares * CURRENT_PRICE_EUR;
+      var currentGain = currentVal - costBasis;
+      var currentROI = (currentVal / costBasis - 1) * 100;
+      var sellAllVal = inv.shares * ipoPriceEUR;
+      var sellAllGain = sellAllVal - costBasis;
+      var sellAllROI = (sellAllVal / costBasis - 1) * 100;
+      var sharesToSell = Math.floor(inv.shares * (sellPct / 100));
+      var sharesToKeep = inv.shares - sharesToSell;
+      var sellPartVal = sharesToSell * ipoPriceEUR;
+      var kept6m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m6);
+      var kept12m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m12);
+      var kept18m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m18);
+      var kept24m = sharesToKeep * ipoPriceEUR * (1 + scenario.postIpo.m24);
+      return Object.assign({}, inv, {
+        costBasis: costBasis,
+        currentVal: currentVal,
+        currentGain: currentGain,
+        currentROI: currentROI,
+        sellAllVal: sellAllVal,
+        sellAllGain: sellAllGain,
+        sellAllROI: sellAllROI,
+        sharesToSell: sharesToSell,
+        sharesToKeep: sharesToKeep,
+        sellPartVal: sellPartVal,
+        kept6m: kept6m,
+        kept12m: kept12m,
+        kept18m: kept18m,
+        kept24m: kept24m,
+        partialTotal6m: sellPartVal + kept6m,
+        partialTotal12m: sellPartVal + kept12m,
+        partialTotal18m: sellPartVal + kept18m,
+        partialTotal24m: sellPartVal + kept24m
       });
+    });
+  }, [activeScenario, sellPct]);
+  const totals = useMemo(function () {
+    var t = {
+      costBasis: 0,
+      currentVal: 0,
+      sellAllVal: 0,
+      partialTotal6m: 0,
+      partialTotal12m: 0,
+      partialTotal18m: 0,
+      partialTotal24m: 0,
+      sellPartVal: 0
+    };
+    investorData.forEach(function (d) {
+      t.costBasis += d.costBasis;
+      t.currentVal += d.currentVal;
+      t.sellAllVal += d.sellAllVal;
+      t.partialTotal6m += d.partialTotal6m;
+      t.partialTotal12m += d.partialTotal12m;
+      t.partialTotal18m += d.partialTotal18m;
+      t.partialTotal24m += d.partialTotal24m;
+      t.sellPartVal += d.sellPartVal;
+    });
+    t.sellAllGain = t.sellAllVal - t.costBasis;
+    t.currentGain = t.currentVal - t.costBasis;
+    return t;
+  }, [investorData]);
 
-      var pieData = INVESTORS.map(function(inv) { return { name: inv.name, value: inv.shares, color: inv.color }; });
+  // ── Chart data ─────────────────────────────────────
+  var holdLabel = "Sell " + sellPct + "% + Hold";
+  const timelineData = useMemo(function () {
+    var pts = [{
+      n: "Cost Basis",
+      t: -1
+    }, {
+      n: "Current",
+      t: 0
+    }, {
+      n: "At IPO",
+      t: 1
+    }, {
+      n: "+6 Mo",
+      t: 2
+    }, {
+      n: "+12 Mo",
+      t: 3
+    }, {
+      n: "+18 Mo",
+      t: 4
+    }, {
+      n: "+24 Mo",
+      t: 5
+    }];
+    return pts.map(function (p) {
+      var sa = p.t === -1 ? totals.costBasis : p.t === 0 ? totals.currentVal : totals.sellAllVal;
+      var pa;
+      if (p.t === -1) pa = totals.costBasis;else if (p.t === 0) pa = totals.currentVal;else if (p.t === 1) {
+        pa = totals.sellPartVal;
+        investorData.forEach(function (d) {
+          pa += d.sharesToKeep * ipoPriceEUR;
+        });
+      } else if (p.t === 2) pa = totals.partialTotal6m;else if (p.t === 3) pa = totals.partialTotal12m;else if (p.t === 4) pa = totals.partialTotal18m;else pa = totals.partialTotal24m;
+      var obj = {
+        name: p.n
+      };
+      obj["Sell All at IPO"] = sa;
+      obj[holdLabel] = pa;
+      return obj;
+    });
+  }, [totals, investorData, sellPct]);
+  const barData = useMemo(function () {
+    return investorData.map(function (d) {
+      var obj = {
+        name: d.name,
+        "Cost Basis": Math.round(d.costBasis),
+        "Sell All at IPO": Math.round(d.sellAllVal)
+      };
+      obj["Partial (" + sellPct + "%) +24m"] = Math.round(d.partialTotal24m);
+      return obj;
+    });
+  }, [investorData, sellPct]);
+  var comparableData = COMPARABLE_IPOS.map(function (c) {
+    return {
+      name: c.name,
+      "First Day": c.firstDay,
+      "6 Months": c.month6,
+      "Current": c.current
+    };
+  });
+  var pieData = INVESTORS.map(function (inv) {
+    return {
+      name: inv.name,
+      value: inv.shares,
+      color: inv.color
+    };
+  });
+  var eurFmt = function (v) {
+    return "\u20AC" + (v / 1000).toFixed(0) + "k";
+  };
+  var pctFmt = function (v) {
+    return v + "%";
+  };
 
-      var eurFmt = function(v) { return "\u20AC" + (v / 1000).toFixed(0) + "k"; };
-      var pctFmt = function(v) { return v + "%"; };
-
-      // ══════════════════════════════════════════════════
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30">
-          {/* ── Header ──────────────────────────────────── */}
-          <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-indigo-900 text-white">
-            <div className="max-w-7xl mx-auto px-6 py-8">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
-                      <span className="text-xl font-black text-indigo-600">R</span>
-                    </div>
-                    <h1 className="text-2xl font-bold tracking-tight">Revolut IPO Scenario Dashboard</h1>
-                  </div>
-                  <p className="text-gray-300 text-sm max-w-xl">Interactive analysis of exit strategies for your Revolut pre-IPO shares. Based on current $75B valuation, comparable fintech IPOs, and historical market patterns.</p>
-                </div>
-                <div className="flex gap-3 flex-wrap">
-                  {[{ l: "Current Price", v: fmtGBP(CURRENT_PRICE_GBP, 2) }, { l: "Valuation", v: "$75B" }, { l: "Total Shares", v: TOTAL_SHARES }].map(function(m, i) {
-                    return <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-center">
-                      <p className="text-xs text-gray-400 uppercase tracking-wider">{m.l}</p>
-                      <p className="text-lg font-bold">{m.v}</p>
-                    </div>;
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-            {/* ── Tabs ──────────────────────────────────────── */}
-            <div className="flex gap-2 bg-white rounded-xl p-1.5 shadow-sm border border-gray-100 w-fit">
-              {[{ id: "overview", l: "Portfolio Overview" }, { id: "scenarios", l: "IPO Scenarios" }, { id: "comparables", l: "Market Comparables" }].map(function(tab) {
-                return <button key={tab.id} onClick={function(){ setActiveTab(tab.id); }}
-                  className={"px-5 py-2.5 rounded-lg text-sm font-semibold transition-all " + (activeTab === tab.id ? "bg-indigo-600 text-white shadow-md" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50")}>{tab.l}</button>;
-              })}
-            </div>
-
-            {/* ═══════════════ OVERVIEW ═══════════════ */}
-            {activeTab === "overview" && <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Total Invested</p><p className="text-2xl font-bold text-gray-900 mt-1">{fmt(totals.costBasis)}</p><p className="text-xs text-gray-400 mt-1">Across 2 batches</p></Card>
-                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Current Value</p><p className="text-2xl font-bold text-gray-900 mt-1">{fmt(totals.currentVal)}</p><p className="text-xs text-emerald-600 font-semibold mt-1">{fmtPct(((totals.currentVal / totals.costBasis) - 1) * 100)} return</p></Card>
-                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Unrealized Gain</p><p className="text-2xl font-bold text-emerald-600 mt-1">{fmt(totals.currentGain)}</p><p className="text-xs text-gray-400 mt-1">{fmtX(totals.currentVal / totals.costBasis)} multiple</p></Card>
-                <Card className="p-5"><p className="text-xs text-gray-400 uppercase font-semibold tracking-wider">Avg Return</p><p className="text-2xl font-bold text-emerald-600 mt-1">{fmtX(totals.currentVal / totals.costBasis)}</p><p className="text-xs text-gray-400 mt-1">On total capital deployed</p></Card>
-              </div>
-
-              <Card className="overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100"><h2 className="text-lg font-bold text-gray-900">Individual Positions</h2></div>
-                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50">
-                  {["Investor","Batch","Shares","Purchase Price","Cost Basis","Current Value","Gain","ROI"].map(function(h,i){
-                    return <th key={i} className={(i<2?"text-left":"text-right")+" px-6 py-3 font-semibold text-gray-500 uppercase text-xs tracking-wider"}>{h}</th>;
-                  })}
-                </tr></thead><tbody>
-                  {investorData.map(function(d){return <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-6 py-4"><div className="flex items-center gap-2"><Dot color={d.color} size={12} /><span className="font-semibold text-gray-900">{d.name}</span></div></td>
-                    <td className="px-6 py-4"><Badge color={d.batch===1?"indigo":"blue"}>{"Batch "+d.batch}</Badge></td>
-                    <td className="text-right px-6 py-4 font-medium">{d.shares}</td>
-                    <td className="text-right px-6 py-4 text-gray-600">{fmtGBP(d.purchasePriceGBP,2)}</td>
-                    <td className="text-right px-6 py-4 text-gray-600">{fmt(d.costBasis)}</td>
-                    <td className="text-right px-6 py-4 font-semibold">{fmt(d.currentVal)}</td>
-                    <td className="text-right px-6 py-4 font-semibold text-emerald-600">{fmt(d.currentGain)}</td>
-                    <td className="text-right px-6 py-4"><span className="text-emerald-600 font-bold">{fmtPct(d.currentROI)}</span></td>
-                  </tr>;})}
-                  <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
-                    <td className="px-6 py-4 text-gray-900">Total</td><td></td><td className="text-right px-6 py-4">{TOTAL_SHARES}</td><td></td>
-                    <td className="text-right px-6 py-4">{fmt(totals.costBasis)}</td><td className="text-right px-6 py-4">{fmt(totals.currentVal)}</td>
-                    <td className="text-right px-6 py-4 text-emerald-600">{fmt(totals.currentGain)}</td>
-                    <td className="text-right px-6 py-4 text-emerald-600">{fmtPct(((totals.currentVal/totals.costBasis)-1)*100)}</td>
-                  </tr>
-                </tbody></table></div>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-4">Share Distribution</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart><Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value"
-                      label={function(e){ return e.name+": "+e.value; }}>
-                      {pieData.map(function(e,i){ return <Cell key={i} fill={e.color} />; })}
-                    </Pie><Tooltip /></PieChart>
-                  </ResponsiveContainer>
-                </Card>
-                <Card className="p-6">
-                  <h3 className="font-bold text-gray-900 mb-4">Value by Investor</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={investorData.map(function(d){ return { name: d.name, "Cost Basis": Math.round(d.costBasis), "Current Value": Math.round(d.currentVal) }; })}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={eurFmt} />
-                      <Tooltip content={<TT />} /><Legend />
-                      <Bar dataKey="Cost Basis" fill="#cbd5e1" radius={[4,4,0,0]} />
-                      <Bar dataKey="Current Value" fill="#6366f1" radius={[4,4,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
-              </div>
-
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-3">Key Investment Context</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-indigo-50 rounded-xl p-4"><p className="font-semibold text-indigo-900 text-sm">Revolut Financials (2024)</p><p className="text-indigo-700 text-sm mt-1">Revenue: $4B (+72% YoY)</p><p className="text-indigo-700 text-sm">Profit before tax: $1.4B (+149%)</p><p className="text-indigo-700 text-sm">65M+ customers worldwide</p></div>
-                  <div className="bg-amber-50 rounded-xl p-4"><p className="font-semibold text-amber-900 text-sm">2026 Targets</p><p className="text-amber-700 text-sm mt-1">Revenue target: $9B</p><p className="text-amber-700 text-sm">Profit target: $3.5B</p><p className="text-amber-700 text-sm">IPO likely 2027-2028</p></div>
-                  <div className="bg-emerald-50 rounded-xl p-4"><p className="font-semibold text-emerald-900 text-sm">Valuation Context</p><p className="text-emerald-700 text-sm mt-1">Private: $75B (Nov 2025)</p><p className="text-emerald-700 text-sm">EV/Revenue: 18.3x</p><p className="text-emerald-700 text-sm">Comparable to Barclays, SocGen by mkt cap</p></div>
-                </div>
-              </Card>
-            </div>}
-
-            {/* ═══════════════ SCENARIOS ═══════════════ */}
-            {activeTab === "scenarios" && <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {SCENARIOS.map(function(s){ return <button key={s.id} onClick={function(){ setActiveScenario(s.id); }}
-                  className={"text-left p-5 rounded-2xl border-2 transition-all " + (activeScenario===s.id ? "border-indigo-500 bg-indigo-50/50 shadow-md" : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm")}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">{s.emoji}</span><span className="font-bold text-gray-900">{s.name}</span>
-                    <Badge color={s.id==="bear"?"red":s.id==="base"?"amber":"green"}>{s.tag}</Badge>
-                  </div>
-                  <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-sm font-semibold" style={{ color: s.color }}>
-                      {"IPO Price: " + fmtGBP(CURRENT_PRICE_GBP * s.multiplier, 2) + " (" + (s.multiplier===1 ? "at par" : ((s.multiplier-1)*100).toFixed(0)+"% "+(s.multiplier>1?"premium":"discount")) + ")"}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1 italic">{s.reference}</p>
-                  </div>
-                </button>; })}
-              </div>
-
-              <Card className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <h2 className="text-lg font-bold text-gray-900">{"Strategy: Sell "+sellPct+"% at IPO, Hold "+(100-sellPct)+"%"}</h2>
-                    <p className="text-sm text-gray-500 mt-1">Adjust the slider to compare selling all shares at IPO vs. holding some for post-IPO upside</p>
-                  </div>
-                  <div className="flex items-center gap-4 min-w-[300px]">
-                    <span className="text-xs font-semibold text-gray-500">SELL</span>
-                    <input type="range" min="0" max="100" step="5" value={sellPct} onChange={function(e){ setSellPct(Number(e.target.value)); }}
-                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600" />
-                    <span className="text-sm font-bold text-indigo-600">{sellPct+"%"}</span>
-                  </div>
-                </div>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Strategy A */}
-                <Card className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
-                    <h3 className="text-white font-bold text-lg">Strategy A: Sell 100% at IPO</h3>
-                    <p className="text-white/80 text-xs">Immediate liquidity, zero post-IPO risk</p>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div className="text-center py-3">
-                      <p className="text-3xl font-black text-gray-900">{fmt(totals.sellAllVal)}</p>
-                      <p className="text-sm text-emerald-600 font-semibold mt-1">{fmtPct(((totals.sellAllVal/totals.costBasis)-1)*100)+" return \u00B7 "+fmtX(totals.sellAllVal/totals.costBasis)+" multiple"}</p>
-                    </div>
-                    {investorData.map(function(d){ return <div key={d.id} className="flex items-center justify-between py-2 border-t border-gray-50">
-                      <div className="flex items-center gap-2"><Dot color={d.color} /><span className="text-sm font-medium text-gray-700">{d.name}</span></div>
-                      <div className="text-right"><span className="text-sm font-bold">{fmt(d.sellAllVal)}</span><span className="text-xs text-emerald-600 ml-2">{fmtPct(d.sellAllROI)}</span></div>
-                    </div>; })}
-                    <div className="bg-amber-50 rounded-xl p-3"><p className="text-xs text-amber-800"><strong>Pros:</strong> Guaranteed returns, no market risk, immediate liquidity.</p><p className="text-xs text-amber-800 mt-1"><strong>Cons:</strong> Miss potential post-IPO upside if stock appreciates.</p></div>
-                  </div>
-                </Card>
-                {/* Strategy B */}
-                <Card className="overflow-hidden">
-                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
-                    <h3 className="text-white font-bold text-lg">{"Strategy B: Sell "+sellPct+"%, Hold "+(100-sellPct)+"%"}</h3>
-                    <p className="text-white/80 text-xs">Partial liquidity + upside exposure</p>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-3 text-center">
-                      <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500 font-semibold">Cashed Out at IPO</p><p className="text-xl font-black text-gray-900">{fmt(totals.sellPartVal)}</p></div>
-                      <div className="bg-indigo-50 rounded-xl p-3"><p className="text-xs text-indigo-500 font-semibold">Value at +24m</p><p className="text-xl font-black text-indigo-700">{fmt(totals.partialTotal24m)}</p></div>
-                    </div>
-                    {investorData.map(function(d){ return <div key={d.id} className="flex items-center justify-between py-2 border-t border-gray-50">
-                      <div className="flex items-center gap-2"><Dot color={d.color} /><span className="text-sm font-medium text-gray-700">{d.name}</span><span className="text-xs text-gray-400">{" ("+d.sharesToSell+" sell / "+d.sharesToKeep+" hold)"}</span></div>
-                      <span className="text-sm font-bold">{fmt(d.partialTotal24m)}</span>
-                    </div>; })}
-                    <div className="bg-indigo-50 rounded-xl p-3"><p className="text-xs text-indigo-800"><strong>Pros:</strong> Some guaranteed gains + exposure to further upside.</p><p className="text-xs text-indigo-800 mt-1"><strong>Cons:</strong> Post-IPO lock-up risk; most fintech stocks traded below IPO price in 2025.</p></div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Timeline */}
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-1">{"Strategy Value Over Time ("+scenario.name+")"}</h3>
-                <p className="text-xs text-gray-500 mb-4">Projected portfolio value based on historical post-IPO patterns for comparable fintech IPOs</p>
-                <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={timelineData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} /><stop offset="95%" stopColor="#f59e0b" stopOpacity={0} /></linearGradient>
-                      <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} /><stop offset="95%" stopColor="#6366f1" stopOpacity={0} /></linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={eurFmt} />
-                    <Tooltip content={<TT />} /><Legend />
-                    <Area type="monotone" dataKey="Sell All at IPO" stroke="#f59e0b" fill="url(#gA)" strokeWidth={2.5} dot={{ r: 4 }} />
-                    <Area type="monotone" dataKey={holdLabel} stroke="#6366f1" fill="url(#gB)" strokeWidth={2.5} dot={{ r: 4 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Card>
-
-              {/* Per-investor bars */}
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-4">Per-Investor: IPO Proceeds Breakdown</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={barData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={eurFmt} />
-                    <Tooltip content={<TT />} /><Legend />
-                    <Bar dataKey="Cost Basis" fill="#cbd5e1" radius={[4,4,0,0]} />
-                    <Bar dataKey="Sell All at IPO" fill="#f59e0b" radius={[4,4,0,0]} />
-                    <Bar dataKey={"Partial ("+sellPct+"%) +24m"} fill="#6366f1" radius={[4,4,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-
-              {/* Projection table */}
-              <Card className="overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100">
-                  <h3 className="font-bold text-gray-900">{"Detailed Post-IPO Projections ("+scenario.name+")"}</h3>
-                  <p className="text-xs text-gray-500 mt-1">{"Value of held shares over time if you sell "+sellPct+"% at IPO"}</p>
-                </div>
-                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50">
-                  {["Investor","Sold","IPO Cash","Held","+6m","+12m","+18m","+24m"].map(function(h,i){
-                    return <th key={i} className={(i===0?"text-left px-6":"text-right px-4")+" py-3 font-semibold text-gray-500 uppercase text-xs"}>{h}</th>;
-                  })}
-                </tr></thead><tbody>
-                  {investorData.map(function(d){ return <tr key={d.id} className="border-t border-gray-50 hover:bg-gray-50/50">
-                    <td className="px-6 py-3 font-semibold">{d.name}</td><td className="text-right px-4 py-3">{d.sharesToSell}</td>
-                    <td className="text-right px-4 py-3 font-medium">{fmt(d.sellPartVal)}</td><td className="text-right px-4 py-3">{d.sharesToKeep}</td>
-                    <td className="text-right px-4 py-3">{fmt(d.partialTotal6m)}</td><td className="text-right px-4 py-3">{fmt(d.partialTotal12m)}</td>
-                    <td className="text-right px-4 py-3">{fmt(d.partialTotal18m)}</td><td className="text-right px-4 py-3 font-bold">{fmt(d.partialTotal24m)}</td>
-                  </tr>; })}
-                  <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold">
-                    <td className="px-6 py-3">Total</td>
-                    <td className="text-right px-4 py-3">{investorData.reduce(function(s,d){return s+d.sharesToSell;},0)}</td>
-                    <td className="text-right px-4 py-3">{fmt(totals.sellPartVal)}</td>
-                    <td className="text-right px-4 py-3">{investorData.reduce(function(s,d){return s+d.sharesToKeep;},0)}</td>
-                    <td className="text-right px-4 py-3">{fmt(totals.partialTotal6m)}</td><td className="text-right px-4 py-3">{fmt(totals.partialTotal12m)}</td>
-                    <td className="text-right px-4 py-3">{fmt(totals.partialTotal18m)}</td><td className="text-right px-4 py-3">{fmt(totals.partialTotal24m)}</td>
-                  </tr>
-                </tbody></table></div>
-              </Card>
-
-              {/* Decision framework */}
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-4">Decision Framework</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="border-2 border-red-100 rounded-xl p-4 bg-red-50/30"><p className="font-bold text-red-800 text-sm mb-2">If You Believe Bear Case</p><p className="text-xs text-red-700 leading-relaxed">{"Sell 100% at IPO. Historical data shows most fintech IPOs have traded below listing price within 6 months. Klarna is currently ~50% below its IPO price. Lock in your "+fmtX(totals.currentVal/totals.costBasis)+" return."}</p></div>
-                  <div className="border-2 border-amber-100 rounded-xl p-4 bg-amber-50/30"><p className="font-bold text-amber-800 text-sm mb-2">If You Believe Base Case</p><p className="text-xs text-amber-700 leading-relaxed">Sell 50-75% at IPO, hold the rest. This locks in significant gains while keeping exposure to potential upside. Revolut's strong revenue growth could support the valuation.</p></div>
-                  <div className="border-2 border-emerald-100 rounded-xl p-4 bg-emerald-50/30"><p className="font-bold text-emerald-800 text-sm mb-2">If You Believe Bull Case</p><p className="text-xs text-emerald-700 leading-relaxed">Sell 25-50% at IPO. Nubank went from $45B IPO to $90B+ market cap. If Revolut executes on its $9B revenue target, significant upside remains.</p></div>
-                </div>
-              </Card>
-            </div>}
-
-            {/* ═══════════════ COMPARABLES ═══════════════ */}
-            {activeTab === "comparables" && <div className="space-y-6">
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-1">Comparable Fintech IPO Performance</h3>
-                <p className="text-xs text-gray-500 mb-4">Return from IPO price at various time horizons</p>
-                <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={comparableData} margin={{ top: 10, right: 30, left: 20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis tick={{ fontSize: 11 }} tickFormatter={pctFmt} />
-                    <Tooltip formatter={function(v){ return v+"%"; }} /><Legend />
-                    <ReferenceLine y={0} stroke="#374151" strokeWidth={1.5} />
-                    <Bar dataKey="First Day" fill="#6366f1" radius={[3,3,0,0]} />
-                    <Bar dataKey="6 Months" fill="#f59e0b" radius={[3,3,0,0]} />
-                    <Bar dataKey="Current" fill="#22c55e" radius={[3,3,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {COMPARABLE_IPOS.map(function(c,i){ return <Card key={i} className="p-5">
-                  <div className="flex items-center justify-between mb-3"><h4 className="font-bold text-gray-900">{c.name}</h4><Badge color="blue">{c.valAtIPO}</Badge></div>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[{l:"Day 1",v:c.firstDay},{l:"6m",v:c.month6},{l:"12m",v:c.month12},{l:"Current",v:c.current}].map(function(m,j){
-                      return <div key={j} className="text-center bg-gray-50 rounded-lg p-2">
-                        <p className="text-xs text-gray-400 font-semibold">{m.l}</p>
-                        <p className={"text-sm font-bold "+(m.v==null?"text-gray-300":m.v>=0?"text-emerald-600":"text-red-500")}>{m.v==null?"N/A":fmtPct(m.v)}</p>
-                      </div>;
-                    })}
-                  </div>
-                </Card>; })}
-              </div>
-
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-3">Key Takeaways for Revolut</h3>
-                <div className="space-y-3">
-                  {[
-                    {c:"#dc2626",bg:"#fee2e2",ic:"!",t:"Post-IPO pattern is bearish",d:"Nearly every fintech that went public in 2025 now trades below its IPO price. Klarna is at -50%, and the sector faces ongoing valuation pressure."},
-                    {c:"#d97706",bg:"#fef3c7",ic:"~",t:"EV/Revenue multiple is stretched",d:"At 18.3x revenue, Revolut trades at ~4x the industry peer median. This is justified only if Revolut delivers on its ambitious $9B revenue target for 2026."},
-                    {c:"#059669",bg:"#d1fae5",ic:"+",t:"Long-term bull case exists",d:"Nubank recovered from its post-IPO decline and now trades 56% above its IPO price. If Revolut follows a similar trajectory, holding could be very rewarding."},
-                    {c:"#4f46e5",bg:"#e0e7ff",ic:"i",t:"Your position is exceptional",d:"Batch 1 (Occhino) is sitting on a ~"+fmtX(CURRENT_PRICE_GBP/8.57)+" multiple from entry. Even in a bear IPO scenario, the returns are extraordinary."},
-                  ].map(function(t,i){ return <div key={i} className="flex gap-3 items-start">
-                    <div style={{width:24,height:24,borderRadius:"50%",background:t.bg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}><span style={{color:t.c,fontSize:12,fontWeight:700}}>{t.ic}</span></div>
-                    <p className="text-sm text-gray-700"><strong>{t.t}:</strong> {t.d}</p>
-                  </div>; })}
-                </div>
-              </Card>
-
-              <Card className="overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-100"><h3 className="font-bold text-gray-900">Revolut vs. Public Bank Valuations</h3></div>
-                <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50">
-                  {["Company","Market Cap","Revenue","EV/Revenue","Customers"].map(function(h,i){
-                    return <th key={i} className={(i===0?"text-left px-6":"text-right px-4")+" py-3 font-semibold text-gray-500 uppercase text-xs"}>{h}</th>;
-                  })}
-                </tr></thead><tbody>
-                  {[
-                    {n:"Revolut (Private)",c:"$75B",r:"$4B",e:"18.3x",u:"65M+",hl:true},
-                    {n:"Nubank",c:"$90B",r:"$11.5B",e:"7.8x",u:"127M+"},
-                    {n:"Barclays",c:"~$55B",r:"~$30B",e:"1.8x",u:"48M+"},
-                    {n:"Societe Generale",c:"~$40B",r:"~$28B",e:"1.4x",u:"25M+"},
-                    {n:"Robinhood",c:"~$45B",r:"$3.8B",e:"11.8x",u:"22M+"},
-                  ].map(function(r,i){ return <tr key={i} className={"border-t border-gray-50 "+(r.hl?"bg-indigo-50/50":"hover:bg-gray-50/50")}>
-                    <td className={"px-6 py-3 "+(r.hl?"font-bold text-indigo-700":"font-medium")}>{r.n}</td>
-                    <td className="text-right px-4 py-3">{r.c}</td><td className="text-right px-4 py-3">{r.r}</td>
-                    <td className="text-right px-4 py-3 font-semibold">{r.e}</td><td className="text-right px-4 py-3">{r.u}</td>
-                  </tr>; })}
-                </tbody></table></div>
-              </Card>
-            </div>}
-
-            {/* Footer */}
-            <div className="bg-gray-50 rounded-2xl p-5 mt-8">
-              <p className="text-xs text-gray-400 leading-relaxed"><strong>Disclaimer:</strong> This dashboard is for informational and discussion purposes only. It does not constitute financial advice. Post-IPO projections are based on historical patterns from comparable fintech IPOs (Nubank, Robinhood, Klarna, Chime) and may not reflect actual future performance. All values are estimates using a GBP/EUR rate of {GBP_EUR}. Tax implications, lock-up periods, and transaction costs are not modeled. Consult a qualified financial advisor before making investment decisions. Data sourced from public filings, secondary market transactions, and analyst reports as of February 2026.</p>
-            </div>
-          </div>
-        </div>
-      );
+  // ══════════════════════════════════════════════════
+  return /*#__PURE__*/React.createElement("div", {
+    className: "min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/30"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-gray-900 via-gray-800 to-indigo-900 text-white"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "max-w-7xl mx-auto px-6 py-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-3 mb-2"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "w-10 h-10 bg-white rounded-xl flex items-center justify-center"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xl font-black text-indigo-600"
+  }, "R")), /*#__PURE__*/React.createElement("h1", {
+    className: "text-2xl font-bold tracking-tight"
+  }, "Revolut IPO Scenario Dashboard")), /*#__PURE__*/React.createElement("p", {
+    className: "text-gray-300 text-sm max-w-xl"
+  }, "Interactive analysis of exit strategies for your Revolut pre-IPO shares. Based on current $75B valuation, comparable fintech IPOs, and historical market patterns.")), /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-3 flex-wrap"
+  }, [{
+    l: "Current Price",
+    v: fmtGBP(CURRENT_PRICE_GBP, 2)
+  }, {
+    l: "Valuation",
+    v: "$75B"
+  }, {
+    l: "Total Shares",
+    v: TOTAL_SHARES
+  }].map(function (m, i) {
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 text-center"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-400 uppercase tracking-wider"
+    }, m.l), /*#__PURE__*/React.createElement("p", {
+      className: "text-lg font-bold"
+    }, m.v));
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "max-w-7xl mx-auto px-6 py-8 space-y-8"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex gap-2 bg-white rounded-xl p-1.5 shadow-sm border border-gray-100 w-fit"
+  }, [{
+    id: "overview",
+    l: "Portfolio Overview"
+  }, {
+    id: "scenarios",
+    l: "IPO Scenarios"
+  }, {
+    id: "comparables",
+    l: "Market Comparables"
+  }].map(function (tab) {
+    return /*#__PURE__*/React.createElement("button", {
+      key: tab.id,
+      onClick: function () {
+        setActiveTab(tab.id);
+      },
+      className: "px-5 py-2.5 rounded-lg text-sm font-semibold transition-all " + (activeTab === tab.id ? "bg-indigo-600 text-white shadow-md" : "text-gray-500 hover:text-gray-800 hover:bg-gray-50")
+    }, tab.l);
+  })), activeTab === "overview" && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-4 gap-4"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "p-5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 uppercase font-semibold tracking-wider"
+  }, "Total Invested"), /*#__PURE__*/React.createElement("p", {
+    className: "text-2xl font-bold text-gray-900 mt-1"
+  }, fmt(totals.costBasis)), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 mt-1"
+  }, "Across 2 batches")), /*#__PURE__*/React.createElement(Card, {
+    className: "p-5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 uppercase font-semibold tracking-wider"
+  }, "Current Value"), /*#__PURE__*/React.createElement("p", {
+    className: "text-2xl font-bold text-gray-900 mt-1"
+  }, fmt(totals.currentVal)), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-emerald-600 font-semibold mt-1"
+  }, fmtPct((totals.currentVal / totals.costBasis - 1) * 100), " return")), /*#__PURE__*/React.createElement(Card, {
+    className: "p-5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 uppercase font-semibold tracking-wider"
+  }, "Unrealized Gain"), /*#__PURE__*/React.createElement("p", {
+    className: "text-2xl font-bold text-emerald-600 mt-1"
+  }, fmt(totals.currentGain)), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 mt-1"
+  }, fmtX(totals.currentVal / totals.costBasis), " multiple")), /*#__PURE__*/React.createElement(Card, {
+    className: "p-5"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 uppercase font-semibold tracking-wider"
+  }, "Avg Return"), /*#__PURE__*/React.createElement("p", {
+    className: "text-2xl font-bold text-emerald-600 mt-1"
+  }, fmtX(totals.currentVal / totals.costBasis)), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 mt-1"
+  }, "On total capital deployed"))), /*#__PURE__*/React.createElement(Card, {
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 py-4 border-b border-gray-100"
+  }, /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-bold text-gray-900"
+  }, "Individual Positions")), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-sm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-gray-50"
+  }, ["Investor", "Batch", "Shares", "Purchase Price", "Cost Basis", "Current Value", "Gain", "ROI"].map(function (h, i) {
+    return /*#__PURE__*/React.createElement("th", {
+      key: i,
+      className: (i < 2 ? "text-left" : "text-right") + " px-6 py-3 font-semibold text-gray-500 uppercase text-xs tracking-wider"
+    }, h);
+  }))), /*#__PURE__*/React.createElement("tbody", null, investorData.map(function (d) {
+    return /*#__PURE__*/React.createElement("tr", {
+      key: d.id,
+      className: "border-t border-gray-50 hover:bg-gray-50/50"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-6 py-4"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Dot, {
+      color: d.color,
+      size: 12
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "font-semibold text-gray-900"
+    }, d.name))), /*#__PURE__*/React.createElement("td", {
+      className: "px-6 py-4"
+    }, /*#__PURE__*/React.createElement(Badge, {
+      color: d.batch === 1 ? "indigo" : "blue"
+    }, "Batch " + d.batch)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-6 py-4 font-medium"
+    }, d.shares), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-6 py-4 text-gray-600"
+    }, fmtGBP(d.purchasePriceGBP, 2)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-6 py-4 text-gray-600"
+    }, fmt(d.costBasis)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-6 py-4 font-semibold"
+    }, fmt(d.currentVal)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-6 py-4 font-semibold text-emerald-600"
+    }, fmt(d.currentGain)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-6 py-4"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-emerald-600 font-bold"
+    }, fmtPct(d.currentROI))));
+  }), /*#__PURE__*/React.createElement("tr", {
+    className: "border-t-2 border-gray-200 bg-gray-50 font-bold"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "px-6 py-4 text-gray-900"
+  }, "Total"), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-6 py-4"
+  }, TOTAL_SHARES), /*#__PURE__*/React.createElement("td", null), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-6 py-4"
+  }, fmt(totals.costBasis)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-6 py-4"
+  }, fmt(totals.currentVal)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-6 py-4 text-emerald-600"
+  }, fmt(totals.currentGain)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-6 py-4 text-emerald-600"
+  }, fmtPct((totals.currentVal / totals.costBasis - 1) * 100))))))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-4"
+  }, "Share Distribution"), /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 250
+  }, /*#__PURE__*/React.createElement(PieChart, null, /*#__PURE__*/React.createElement(Pie, {
+    data: pieData,
+    cx: "50%",
+    cy: "50%",
+    innerRadius: 60,
+    outerRadius: 100,
+    paddingAngle: 4,
+    dataKey: "value",
+    label: function (e) {
+      return e.name + ": " + e.value;
     }
-
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  }, pieData.map(function (e, i) {
+    return /*#__PURE__*/React.createElement(Cell, {
+      key: i,
+      fill: e.color
+    });
+  })), /*#__PURE__*/React.createElement(Tooltip, null)))), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-4"
+  }, "Value by Investor"), /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 250
+  }, /*#__PURE__*/React.createElement(BarChart, {
+    data: investorData.map(function (d) {
+      return {
+        name: d.name,
+        "Cost Basis": Math.round(d.costBasis),
+        "Current Value": Math.round(d.currentVal)
+      };
+    })
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "name",
+    tick: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    tickFormatter: eurFmt
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    content: /*#__PURE__*/React.createElement(TT, null)
+  }), /*#__PURE__*/React.createElement(Legend, null), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "Cost Basis",
+    fill: "#cbd5e1",
+    radius: [4, 4, 0, 0]
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "Current Value",
+    fill: "#6366f1",
+    radius: [4, 4, 0, 0]
+  }))))), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-3"
+  }, "Key Investment Context"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-3 gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-indigo-50 rounded-xl p-4"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-indigo-900 text-sm"
+  }, "Revolut Financials (2024)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-indigo-700 text-sm mt-1"
+  }, "Revenue: $4B (+72% YoY)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-indigo-700 text-sm"
+  }, "Profit before tax: $1.4B (+149%)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-indigo-700 text-sm"
+  }, "65M+ customers worldwide")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-amber-50 rounded-xl p-4"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-amber-900 text-sm"
+  }, "2026 Targets"), /*#__PURE__*/React.createElement("p", {
+    className: "text-amber-700 text-sm mt-1"
+  }, "Revenue target: $9B"), /*#__PURE__*/React.createElement("p", {
+    className: "text-amber-700 text-sm"
+  }, "Profit target: $3.5B"), /*#__PURE__*/React.createElement("p", {
+    className: "text-amber-700 text-sm"
+  }, "IPO likely 2027-2028")), /*#__PURE__*/React.createElement("div", {
+    className: "bg-emerald-50 rounded-xl p-4"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-semibold text-emerald-900 text-sm"
+  }, "Valuation Context"), /*#__PURE__*/React.createElement("p", {
+    className: "text-emerald-700 text-sm mt-1"
+  }, "Private: $75B (Nov 2025)"), /*#__PURE__*/React.createElement("p", {
+    className: "text-emerald-700 text-sm"
+  }, "EV/Revenue: 18.3x"), /*#__PURE__*/React.createElement("p", {
+    className: "text-emerald-700 text-sm"
+  }, "Comparable to Barclays, SocGen by mkt cap"))))), activeTab === "scenarios" && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-3 gap-4"
+  }, SCENARIOS.map(function (s) {
+    return /*#__PURE__*/React.createElement("button", {
+      key: s.id,
+      onClick: function () {
+        setActiveScenario(s.id);
+      },
+      className: "text-left p-5 rounded-2xl border-2 transition-all " + (activeScenario === s.id ? "border-indigo-500 bg-indigo-50/50 shadow-md" : "border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm")
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2 mb-2"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-xl"
+    }, s.emoji), /*#__PURE__*/React.createElement("span", {
+      className: "font-bold text-gray-900"
+    }, s.name), /*#__PURE__*/React.createElement(Badge, {
+      color: s.id === "bear" ? "red" : s.id === "base" ? "amber" : "green"
+    }, s.tag)), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-500 leading-relaxed"
+    }, s.desc), /*#__PURE__*/React.createElement("div", {
+      className: "mt-3 pt-3 border-t border-gray-100"
+    }, /*#__PURE__*/React.createElement("p", {
+      className: "text-sm font-semibold",
+      style: {
+        color: s.color
+      }
+    }, "IPO Price: " + fmtGBP(CURRENT_PRICE_GBP * s.multiplier, 2) + " (" + (s.multiplier === 1 ? "at par" : ((s.multiplier - 1) * 100).toFixed(0) + "% " + (s.multiplier > 1 ? "premium" : "discount")) + ")"), /*#__PURE__*/React.createElement("p", {
+      className: "text-xs text-gray-400 mt-1 italic"
+    }, s.reference)));
+  })), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
+    className: "text-lg font-bold text-gray-900"
+  }, "Strategy: Sell " + sellPct + "% at IPO, Hold " + (100 - sellPct) + "%"), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-gray-500 mt-1"
+  }, "Adjust the slider to compare selling all shares at IPO vs. holding some for post-IPO upside")), /*#__PURE__*/React.createElement("div", {
+    className: "flex items-center gap-4 min-w-[300px]"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "text-xs font-semibold text-gray-500"
+  }, "SELL"), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "100",
+    step: "5",
+    value: sellPct,
+    onChange: function (e) {
+      setSellPct(Number(e.target.value));
+    },
+    className: "flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "text-sm font-bold text-indigo-600"
+  }, sellPct + "%")))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-2 gap-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-white font-bold text-lg"
+  }, "Strategy A: Sell 100% at IPO"), /*#__PURE__*/React.createElement("p", {
+    className: "text-white/80 text-xs"
+  }, "Immediate liquidity, zero post-IPO risk")), /*#__PURE__*/React.createElement("div", {
+    className: "p-6 space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "text-center py-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-3xl font-black text-gray-900"
+  }, fmt(totals.sellAllVal)), /*#__PURE__*/React.createElement("p", {
+    className: "text-sm text-emerald-600 font-semibold mt-1"
+  }, fmtPct((totals.sellAllVal / totals.costBasis - 1) * 100) + " return \u00B7 " + fmtX(totals.sellAllVal / totals.costBasis) + " multiple")), investorData.map(function (d) {
+    return /*#__PURE__*/React.createElement("div", {
+      key: d.id,
+      className: "flex items-center justify-between py-2 border-t border-gray-50"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Dot, {
+      color: d.color
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-medium text-gray-700"
+    }, d.name)), /*#__PURE__*/React.createElement("div", {
+      className: "text-right"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-bold"
+    }, fmt(d.sellAllVal)), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-emerald-600 ml-2"
+    }, fmtPct(d.sellAllROI))));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "bg-amber-50 rounded-xl p-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-amber-800"
+  }, /*#__PURE__*/React.createElement("strong", null, "Pros:"), " Guaranteed returns, no market risk, immediate liquidity."), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-amber-800 mt-1"
+  }, /*#__PURE__*/React.createElement("strong", null, "Cons:"), " Miss potential post-IPO upside if stock appreciates.")))), /*#__PURE__*/React.createElement(Card, {
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "text-white font-bold text-lg"
+  }, "Strategy B: Sell " + sellPct + "%, Hold " + (100 - sellPct) + "%"), /*#__PURE__*/React.createElement("p", {
+    className: "text-white/80 text-xs"
+  }, "Partial liquidity + upside exposure")), /*#__PURE__*/React.createElement("div", {
+    className: "p-6 space-y-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-2 gap-3 text-center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "bg-gray-50 rounded-xl p-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 font-semibold"
+  }, "Cashed Out at IPO"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-black text-gray-900"
+  }, fmt(totals.sellPartVal))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-indigo-50 rounded-xl p-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-indigo-500 font-semibold"
+  }, "Value at +24m"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xl font-black text-indigo-700"
+  }, fmt(totals.partialTotal24m)))), investorData.map(function (d) {
+    return /*#__PURE__*/React.createElement("div", {
+      key: d.id,
+      className: "flex items-center justify-between py-2 border-t border-gray-50"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center gap-2"
+    }, /*#__PURE__*/React.createElement(Dot, {
+      color: d.color
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-medium text-gray-700"
+    }, d.name), /*#__PURE__*/React.createElement("span", {
+      className: "text-xs text-gray-400"
+    }, " (" + d.sharesToSell + " sell / " + d.sharesToKeep + " hold)")), /*#__PURE__*/React.createElement("span", {
+      className: "text-sm font-bold"
+    }, fmt(d.partialTotal24m)));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "bg-indigo-50 rounded-xl p-3"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-indigo-800"
+  }, /*#__PURE__*/React.createElement("strong", null, "Pros:"), " Some guaranteed gains + exposure to further upside."), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-indigo-800 mt-1"
+  }, /*#__PURE__*/React.createElement("strong", null, "Cons:"), " Post-IPO lock-up risk; most fintech stocks traded below IPO price in 2025."))))), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-1"
+  }, "Strategy Value Over Time (" + scenario.name + ")"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mb-4"
+  }, "Projected portfolio value based on historical post-IPO patterns for comparable fintech IPOs"), /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 350
+  }, /*#__PURE__*/React.createElement(AreaChart, {
+    data: timelineData,
+    margin: {
+      top: 10,
+      right: 30,
+      left: 20,
+      bottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("defs", null, /*#__PURE__*/React.createElement("linearGradient", {
+    id: "gA",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "5%",
+    stopColor: "#f59e0b",
+    stopOpacity: 0.15
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "95%",
+    stopColor: "#f59e0b",
+    stopOpacity: 0
+  })), /*#__PURE__*/React.createElement("linearGradient", {
+    id: "gB",
+    x1: "0",
+    y1: "0",
+    x2: "0",
+    y2: "1"
+  }, /*#__PURE__*/React.createElement("stop", {
+    offset: "5%",
+    stopColor: "#6366f1",
+    stopOpacity: 0.15
+  }), /*#__PURE__*/React.createElement("stop", {
+    offset: "95%",
+    stopColor: "#6366f1",
+    stopOpacity: 0
+  }))), /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "name",
+    tick: {
+      fontSize: 11
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    tickFormatter: eurFmt
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    content: /*#__PURE__*/React.createElement(TT, null)
+  }), /*#__PURE__*/React.createElement(Legend, null), /*#__PURE__*/React.createElement(Area, {
+    type: "monotone",
+    dataKey: "Sell All at IPO",
+    stroke: "#f59e0b",
+    fill: "url(#gA)",
+    strokeWidth: 2.5,
+    dot: {
+      r: 4
+    }
+  }), /*#__PURE__*/React.createElement(Area, {
+    type: "monotone",
+    dataKey: holdLabel,
+    stroke: "#6366f1",
+    fill: "url(#gB)",
+    strokeWidth: 2.5,
+    dot: {
+      r: 4
+    }
+  })))), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-4"
+  }, "Per-Investor: IPO Proceeds Breakdown"), /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 300
+  }, /*#__PURE__*/React.createElement(BarChart, {
+    data: barData,
+    margin: {
+      top: 10,
+      right: 30,
+      left: 20,
+      bottom: 0
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "name",
+    tick: {
+      fontSize: 12
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    tickFormatter: eurFmt
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    content: /*#__PURE__*/React.createElement(TT, null)
+  }), /*#__PURE__*/React.createElement(Legend, null), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "Cost Basis",
+    fill: "#cbd5e1",
+    radius: [4, 4, 0, 0]
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "Sell All at IPO",
+    fill: "#f59e0b",
+    radius: [4, 4, 0, 0]
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "Partial (" + sellPct + "%) +24m",
+    fill: "#6366f1",
+    radius: [4, 4, 0, 0]
+  })))), /*#__PURE__*/React.createElement(Card, {
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 py-4 border-b border-gray-100"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900"
+  }, "Detailed Post-IPO Projections (" + scenario.name + ")"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mt-1"
+  }, "Value of held shares over time if you sell " + sellPct + "% at IPO")), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-sm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-gray-50"
+  }, ["Investor", "Sold", "IPO Cash", "Held", "+6m", "+12m", "+18m", "+24m"].map(function (h, i) {
+    return /*#__PURE__*/React.createElement("th", {
+      key: i,
+      className: (i === 0 ? "text-left px-6" : "text-right px-4") + " py-3 font-semibold text-gray-500 uppercase text-xs"
+    }, h);
+  }))), /*#__PURE__*/React.createElement("tbody", null, investorData.map(function (d) {
+    return /*#__PURE__*/React.createElement("tr", {
+      key: d.id,
+      className: "border-t border-gray-50 hover:bg-gray-50/50"
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-6 py-3 font-semibold"
+    }, d.name), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, d.sharesToSell), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3 font-medium"
+    }, fmt(d.sellPartVal)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, d.sharesToKeep), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, fmt(d.partialTotal6m)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, fmt(d.partialTotal12m)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, fmt(d.partialTotal18m)), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3 font-bold"
+    }, fmt(d.partialTotal24m)));
+  }), /*#__PURE__*/React.createElement("tr", {
+    className: "border-t-2 border-gray-200 bg-gray-50 font-bold"
+  }, /*#__PURE__*/React.createElement("td", {
+    className: "px-6 py-3"
+  }, "Total"), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, investorData.reduce(function (s, d) {
+    return s + d.sharesToSell;
+  }, 0)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, fmt(totals.sellPartVal)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, investorData.reduce(function (s, d) {
+    return s + d.sharesToKeep;
+  }, 0)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, fmt(totals.partialTotal6m)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, fmt(totals.partialTotal12m)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, fmt(totals.partialTotal18m)), /*#__PURE__*/React.createElement("td", {
+    className: "text-right px-4 py-3"
+  }, fmt(totals.partialTotal24m))))))), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-4"
+  }, "Decision Framework"), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-3 gap-4"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "border-2 border-red-100 rounded-xl p-4 bg-red-50/30"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-bold text-red-800 text-sm mb-2"
+  }, "If You Believe Bear Case"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-red-700 leading-relaxed"
+  }, "Sell 100% at IPO. Historical data shows most fintech IPOs have traded below listing price within 6 months. Klarna is currently ~50% below its IPO price. Lock in your " + fmtX(totals.currentVal / totals.costBasis) + " return.")), /*#__PURE__*/React.createElement("div", {
+    className: "border-2 border-amber-100 rounded-xl p-4 bg-amber-50/30"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-bold text-amber-800 text-sm mb-2"
+  }, "If You Believe Base Case"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-amber-700 leading-relaxed"
+  }, "Sell 50-75% at IPO, hold the rest. This locks in significant gains while keeping exposure to potential upside. Revolut's strong revenue growth could support the valuation.")), /*#__PURE__*/React.createElement("div", {
+    className: "border-2 border-emerald-100 rounded-xl p-4 bg-emerald-50/30"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "font-bold text-emerald-800 text-sm mb-2"
+  }, "If You Believe Bull Case"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-emerald-700 leading-relaxed"
+  }, "Sell 25-50% at IPO. Nubank went from $45B IPO to $90B+ market cap. If Revolut executes on its $9B revenue target, significant upside remains."))))), activeTab === "comparables" && /*#__PURE__*/React.createElement("div", {
+    className: "space-y-6"
+  }, /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-1"
+  }, "Comparable Fintech IPO Performance"), /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-500 mb-4"
+  }, "Return from IPO price at various time horizons"), /*#__PURE__*/React.createElement(ResponsiveContainer, {
+    width: "100%",
+    height: 350
+  }, /*#__PURE__*/React.createElement(BarChart, {
+    data: comparableData,
+    margin: {
+      top: 10,
+      right: 30,
+      left: 20,
+      bottom: 0
+    }
+  }, /*#__PURE__*/React.createElement(CartesianGrid, {
+    strokeDasharray: "3 3",
+    stroke: "#f0f0f0"
+  }), /*#__PURE__*/React.createElement(XAxis, {
+    dataKey: "name",
+    tick: {
+      fontSize: 11
+    }
+  }), /*#__PURE__*/React.createElement(YAxis, {
+    tick: {
+      fontSize: 11
+    },
+    tickFormatter: pctFmt
+  }), /*#__PURE__*/React.createElement(Tooltip, {
+    formatter: function (v) {
+      return v + "%";
+    }
+  }), /*#__PURE__*/React.createElement(Legend, null), /*#__PURE__*/React.createElement(ReferenceLine, {
+    y: 0,
+    stroke: "#374151",
+    strokeWidth: 1.5
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "First Day",
+    fill: "#6366f1",
+    radius: [3, 3, 0, 0]
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "6 Months",
+    fill: "#f59e0b",
+    radius: [3, 3, 0, 0]
+  }), /*#__PURE__*/React.createElement(Bar, {
+    dataKey: "Current",
+    fill: "#22c55e",
+    radius: [3, 3, 0, 0]
+  })))), /*#__PURE__*/React.createElement("div", {
+    className: "grid grid-cols-1 md:grid-cols-2 gap-6"
+  }, COMPARABLE_IPOS.map(function (c, i) {
+    return /*#__PURE__*/React.createElement(Card, {
+      key: i,
+      className: "p-5"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "flex items-center justify-between mb-3"
+    }, /*#__PURE__*/React.createElement("h4", {
+      className: "font-bold text-gray-900"
+    }, c.name), /*#__PURE__*/React.createElement(Badge, {
+      color: "blue"
+    }, c.valAtIPO)), /*#__PURE__*/React.createElement("div", {
+      className: "grid grid-cols-4 gap-2"
+    }, [{
+      l: "Day 1",
+      v: c.firstDay
+    }, {
+      l: "6m",
+      v: c.month6
+    }, {
+      l: "12m",
+      v: c.month12
+    }, {
+      l: "Current",
+      v: c.current
+    }].map(function (m, j) {
+      return /*#__PURE__*/React.createElement("div", {
+        key: j,
+        className: "text-center bg-gray-50 rounded-lg p-2"
+      }, /*#__PURE__*/React.createElement("p", {
+        className: "text-xs text-gray-400 font-semibold"
+      }, m.l), /*#__PURE__*/React.createElement("p", {
+        className: "text-sm font-bold " + (m.v == null ? "text-gray-300" : m.v >= 0 ? "text-emerald-600" : "text-red-500")
+      }, m.v == null ? "N/A" : fmtPct(m.v)));
+    })));
+  })), /*#__PURE__*/React.createElement(Card, {
+    className: "p-6"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900 mb-3"
+  }, "Key Takeaways for Revolut"), /*#__PURE__*/React.createElement("div", {
+    className: "space-y-3"
+  }, [{
+    c: "#dc2626",
+    bg: "#fee2e2",
+    ic: "!",
+    t: "Post-IPO pattern is bearish",
+    d: "Nearly every fintech that went public in 2025 now trades below its IPO price. Klarna is at -50%, and the sector faces ongoing valuation pressure."
+  }, {
+    c: "#d97706",
+    bg: "#fef3c7",
+    ic: "~",
+    t: "EV/Revenue multiple is stretched",
+    d: "At 18.3x revenue, Revolut trades at ~4x the industry peer median. This is justified only if Revolut delivers on its ambitious $9B revenue target for 2026."
+  }, {
+    c: "#059669",
+    bg: "#d1fae5",
+    ic: "+",
+    t: "Long-term bull case exists",
+    d: "Nubank recovered from its post-IPO decline and now trades 56% above its IPO price. If Revolut follows a similar trajectory, holding could be very rewarding."
+  }, {
+    c: "#4f46e5",
+    bg: "#e0e7ff",
+    ic: "i",
+    t: "Your position is exceptional",
+    d: "Batch 1 (Occhino) is sitting on a ~" + fmtX(CURRENT_PRICE_GBP / 8.57) + " multiple from entry. Even in a bear IPO scenario, the returns are extraordinary."
+  }].map(function (t, i) {
+    return /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "flex gap-3 items-start"
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        width: 24,
+        height: 24,
+        borderRadius: "50%",
+        background: t.bg,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        marginTop: 2
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: t.c,
+        fontSize: 12,
+        fontWeight: 700
+      }
+    }, t.ic)), /*#__PURE__*/React.createElement("p", {
+      className: "text-sm text-gray-700"
+    }, /*#__PURE__*/React.createElement("strong", null, t.t, ":"), " ", t.d));
+  }))), /*#__PURE__*/React.createElement(Card, {
+    className: "overflow-hidden"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "px-6 py-4 border-b border-gray-100"
+  }, /*#__PURE__*/React.createElement("h3", {
+    className: "font-bold text-gray-900"
+  }, "Revolut vs. Public Bank Valuations")), /*#__PURE__*/React.createElement("div", {
+    className: "overflow-x-auto"
+  }, /*#__PURE__*/React.createElement("table", {
+    className: "w-full text-sm"
+  }, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", {
+    className: "bg-gray-50"
+  }, ["Company", "Market Cap", "Revenue", "EV/Revenue", "Customers"].map(function (h, i) {
+    return /*#__PURE__*/React.createElement("th", {
+      key: i,
+      className: (i === 0 ? "text-left px-6" : "text-right px-4") + " py-3 font-semibold text-gray-500 uppercase text-xs"
+    }, h);
+  }))), /*#__PURE__*/React.createElement("tbody", null, [{
+    n: "Revolut (Private)",
+    c: "$75B",
+    r: "$4B",
+    e: "18.3x",
+    u: "65M+",
+    hl: true
+  }, {
+    n: "Nubank",
+    c: "$90B",
+    r: "$11.5B",
+    e: "7.8x",
+    u: "127M+"
+  }, {
+    n: "Barclays",
+    c: "~$55B",
+    r: "~$30B",
+    e: "1.8x",
+    u: "48M+"
+  }, {
+    n: "Societe Generale",
+    c: "~$40B",
+    r: "~$28B",
+    e: "1.4x",
+    u: "25M+"
+  }, {
+    n: "Robinhood",
+    c: "~$45B",
+    r: "$3.8B",
+    e: "11.8x",
+    u: "22M+"
+  }].map(function (r, i) {
+    return /*#__PURE__*/React.createElement("tr", {
+      key: i,
+      className: "border-t border-gray-50 " + (r.hl ? "bg-indigo-50/50" : "hover:bg-gray-50/50")
+    }, /*#__PURE__*/React.createElement("td", {
+      className: "px-6 py-3 " + (r.hl ? "font-bold text-indigo-700" : "font-medium")
+    }, r.n), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, r.c), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, r.r), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3 font-semibold"
+    }, r.e), /*#__PURE__*/React.createElement("td", {
+      className: "text-right px-4 py-3"
+    }, r.u));
+  })))))), /*#__PURE__*/React.createElement("div", {
+    className: "bg-gray-50 rounded-2xl p-5 mt-8"
+  }, /*#__PURE__*/React.createElement("p", {
+    className: "text-xs text-gray-400 leading-relaxed"
+  }, /*#__PURE__*/React.createElement("strong", null, "Disclaimer:"), " This dashboard is for informational and discussion purposes only. It does not constitute financial advice. Post-IPO projections are based on historical patterns from comparable fintech IPOs (Nubank, Robinhood, Klarna, Chime) and may not reflect actual future performance. All values are estimates using a GBP/EUR rate of ", GBP_EUR, ". Tax implications, lock-up periods, and transaction costs are not modeled. Consult a qualified financial advisor before making investment decisions. Data sourced from public filings, secondary market transactions, and analyst reports as of February 2026."))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(App, null));
   </script>
 </body>
 </html>
